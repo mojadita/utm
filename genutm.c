@@ -1,7 +1,11 @@
-/* $Id: genutm.c,v 2.0 1998/05/12 18:53:09 luis Exp $
+/* $Id: genutm.c,v 2.1 1998/05/14 16:54:19 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Sun May 10 15:25:27 MET DST 1998
  * $Log: genutm.c,v $
+ * Revision 2.1  1998/05/14 16:54:19  luis
+ * Revisión con cálculo de coordenadas UTM a partir de geodésicas y
+ * determinación del recuadro cienkilométrico y la zona.
+ *
  * Revision 2.0  1998/05/12 18:53:09  luis
  * Versión directa completa con cálculo de coordenadas UTM a partir
  * de geodésicas.
@@ -222,6 +226,36 @@ double geod2utmY (double lat, double lon)
   return res;
 }
 
+double hms2h (double x)
+{
+  double deg, min;
+  x = modf (x, &deg)*100.0;
+  x = modf (x, &min)*100.0;
+  return deg + min / 60.0 + x / 3600.0;
+}
+
+int huso (double l, double L, char *zona)
+{
+  static char *t1 = "CDEFGHJKLMNPQRSTUVWXYZ";
+  int h = (int)((L + 180.0) / 6.0) + 1;
+  sprintf (zona, "%2d%c", h, t1 [(int)((l + 80.0) / 8.0)]);
+  return h;
+}
+
+char *zona (int h, double x, double y)
+{
+  static char *t1 = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  static char res [3];
+  int xx, yy;
+  /* first letter */
+  h--;
+  xx = (int) ((x - 100000.0)/100000.0) + 8*(h % 3);
+  yy = (int) (y/100000.0) % 20 + 5*(h % 2);
+  sprintf (res, "%c%c", t1[xx], t1[yy]);
+  return res;
+}
+
+
 /* main program */
 int main (int argc, char **argv)
 {
@@ -280,10 +314,19 @@ int main (int argc, char **argv)
   }
 
   for (;;) {
-	printf ("##> ");
+	char z [10];
+	int h;
+	double x, y;
+	printf ("##(hh.mmssss hh.mmssss)> ");
   	if (!gets(linea)) break;
 	l = L = 0.0;
 	sscanf (linea, "%lf%lf", &l, &L);
+	l = hms2h(l); L = hms2h(L);
+	h = huso (l, L, z);
+	L = fmod (L + 180.0, 6.0) - 3.0;
+
+	printf ("Huso:           %d\n", h);
+	printf ("Zona:           %s\n", z);
 	printf ("Lat(deg)        %-20.17lg\n", l);
 	printf ("Lon(deg)        %-20.17lg\n", L);
 	l *= PI/180.0; L *= PI/180.0;
@@ -301,8 +344,10 @@ int main (int argc, char **argv)
 	printf (" A3:       (V)   %20.3lf\n", -pow(KK,3.0)*K0*A*A3(l));
 	printf (" A5:       (B5)  %20.3lf\n", pow(KK,5.0)*K0*A*A5(l));
 	printf ("\n");
-	printf ("X: %20.3lf\nY: %20.3lf\n", geod2utmX(l, L), geod2utmY(l, L));
+	printf ("X: %20.3lf\nY: %20.3lf\n", x = geod2utmX(l, L), y = geod2utmY(l, L));
+	printf ("zona:            %s%s\n", z, zona(h, x, y));
+
   }
 }
 
-/* $Id: genutm.c,v 2.0 1998/05/12 18:53:09 luis Exp $ */
+/* $Id: genutm.c,v 2.1 1998/05/14 16:54:19 luis Exp $ */
