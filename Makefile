@@ -1,95 +1,109 @@
 CFLAGS=-O2
 LDFLAGS=-lm
 
-.SUFFIXES: .m4 
+.SUFFIXES: .m4 .hp48
 
-all: hayford24 wgs84 wgs72 southam69 modfischer60 modairy krassovsky40 houg60 indo74 utm.hp48
+modulos_o = IN.o WE.o WD.o SA.o FA.o AM.o KA.o HO.o ID.o
+modulos_m4 = $(modulos_o:o=m4)
+modulos_c = $(modulos_o:o=c)
+progs = $(modulos_o:.o=)
+modulos_hp48 = $(modulos_o:o=hp48)
 
-hayford24_objs = hayford24.o main.o
-hayford24: $(hayford24_objs)
-	$(CC) $(LDFLAGS) -o hayford24 $(hayford24_objs)
+all: $(progs) utm.hp48
 
-wgs84_objs = wgs84.o main.o
-wgs84: $(wgs84_objs)
-	$(CC) $(LDFLAGS) -o wgs84 $(wgs84_objs)
+IN_objs = IN.o main.o
+IN: $(IN_objs)
+	$(CC) $(LDFLAGS) -o IN $(IN_objs)
 
-wgs72_objs = wgs72.o main.o
-wgs72: $(wgs72_objs)
-	$(CC) $(LDFLAGS) -o wgs72 $(wgs72_objs)
+WE_objs = WE.o main.o
+WE: $(WE_objs)
+	$(CC) $(LDFLAGS) -o WE $(WE_objs)
 
-southam69_objs = southam69.o main.o
-southam69: $(southam69_objs)
-	$(CC) $(LDFLAGS) -o southam69 $(southam69_objs)
+WD_objs = WD.o main.o
+WD: $(WD_objs)
+	$(CC) $(LDFLAGS) -o WD $(WD_objs)
 
-modfischer60_objs = modfischer60.o main.o
-modfischer60: $(modfischer60_objs)
-	$(CC) $(LDFLAGS) -o modfischer60 $(modfischer60_objs)
+SA_objs = SA.o main.o
+SA: $(SA_objs)
+	$(CC) $(LDFLAGS) -o SA $(SA_objs)
 
-modairy_objs = modairy.o main.o
-modairy: $(modairy_objs)
-	$(CC) $(LDFLAGS) -o modairy $(modairy_objs)
+FA_objs = FA.o main.o
+FA: $(FA_objs)
+	$(CC) $(LDFLAGS) -o FA $(FA_objs)
 
-krassovsky40_objs = krassovsky40.o main.o
-krassovsky40: $(krassovsky40_objs)
-	$(CC) $(LDFLAGS) -o krassovsky40 $(krassovsky40_objs)
+AM_objs = AM.o main.o
+AM: $(AM_objs)
+	$(CC) $(LDFLAGS) -o AM $(AM_objs)
 
-houg60_objs = houg60.o main.o
-houg60: $(houg60_objs)
-	$(CC) $(LDFLAGS) -o houg60 $(houg60_objs)
+KA_objs = KA.o main.o
+KA: $(KA_objs)
+	$(CC) $(LDFLAGS) -o KA $(KA_objs)
 
-indo74_objs = indo74.o main.o
-indo74: $(indo74_objs)
-	$(CC) $(LDFLAGS) -o indo74 $(indo74_objs)
+HO_objs = HO.o main.o
+HO: $(HO_objs)
+	$(CC) $(LDFLAGS) -o HO $(HO_objs)
+
+ID_objs = ID.o main.o
+ID: $(ID_objs)
+	$(CC) $(LDFLAGS) -o ID $(ID_objs)
 
 .m4.o:
 	m4 $*.m4 utm.c.m4 >$*.c
 	$(CC) $(CFLAGS) -c $*.c -o $*.o
 
-hayford24.m4: genutm
+IN.m4: genutm
 	genutm -a 6378388.000 -e 0.0067226700223332915 -k 0.9996 \
-	  -c "European/Hayford/International, 1.924" >hayford24.m4
+	  -c "European/Hayford/International, 1.924" >IN.m4
 
-wgs84.m4: genutm
+WE.m4: genutm
 	genutm -a 6378137.000 -e 0.00669437999014 -k 0.9996 \
-	  -c "World Geodetic, 1.984" >wgs84.m4
+	  -c "World Geodetic, 1.984" >WE.m4
 
-wgs72.m4: genutm
+WD.m4: genutm
 	genutm -a 6378135.0 -e 0.006694317778 -k 0.9996 \
-	  -c "World Geodetic, 1.972" >wgs72.m4
+	  -c "World Geodetic, 1.972" >WD.m4
 
-southam69.m4: genutm
+SA.m4: genutm
 	genutm -a 6378160.0 -e 0.006694541854 -k 0.9996 \
-	  -c "South American, 1.969" >southam69.m4
+	  -c "South American, 1.969" >SA.m4
 
-modfischer60.m4: genutm
+FA.m4: genutm
 	genutm -a 6378155.0 -e 0.006693421622 -k 0.9996 \
-	  -c "Modified Fischer, 1.960" >modfischer60.m4
+	  -c "Modified Fischer, 1.960" >FA.m4
 
-modairy.m4: genutm
+AM.m4: genutm
 	genutm -a 6377340.189 -e 0.006670540001 -k 0.9996 \
-	  -c "Modified Airy" >modairy.m4
+	  -c "Modified Airy" >AM.m4
 
-krassovsky40.m4: genutm
+KA.m4: genutm
 	genutm -a 6378245.0 -e 0.006693421622 -k 0.9996 \
-	  -c "Krassovsky, 1.940" >krassovsky40.m4
+	  -c "Krassovsky, 1.940" >KA.m4
 
-houg60.m4: genutm
+HO.m4: genutm
 	genutm -a 6378270.0 -e 0.006722670022 -k 0.9996 \
-	  -c "Hough, 1.960" >houg60.m4
+	  -c "Hough, 1.960" >HO.m4
 
-indo74.m4: genutm
+ID.m4: genutm
 	genutm -a 6378160.0 -e 0.00669460908 -k 0.9996 \
-	  -c "Indonesian, 1.974" >indo74.m4
+	  -c "Indonesian, 1.974" >ID.m4
 
-utm.hp48: utm.hp48.m4 hayford24.hp48 wgs84.hp48
+utm.hp48: utm.hp48.m4 $(modulos_hp48)
 	m4 utm.hp48.m4 >utm.hp48
 
-hayford24.hp48: hayford24.m4 utmtables.hp48.m4
-	m4 hayford24.m4 utmtables.hp48.m4 >hayford24.hp48
+$(modulos_hp48): utmtables_hp48.m4
 
-wgs84.hp48: wgs84.m4 utmtables.hp48.m4
-	m4 wgs84.m4 utmtables.hp48.m4 >wgs84.hp48
+$(modulos_o): utm.c.m4
+
+.m4.hp48:
+	m4 $*.m4 utmtables_hp48.m4 >$*.hp48
+.m4.o:
+	m4 $*.m4 $*.m4 utm.c.m4 >$*.c
+	$(CC) $(CFLAGS) -c $*.c -o $*.o
 
 genutm_objs = genutm.o
 genutm: $(genutm_objs)
 	$(CC) $(LDFLAGS) -o genutm $(genutm_objs)
+
+clean:
+	rm -f $(modulos_o) $(modulos_c) $(modulos_m4) $(modulos_hp48) $(progs)
+	rm -f *.o genutm utm.hp48
