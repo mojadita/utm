@@ -1,3 +1,7 @@
+# $Id: Makefile,v 1.3 1998/08/24 16:33:08 luis Exp $
+# Author: Luis Colorado <luis.colorado@slug.ctv.es>
+# Date: Mon Aug 24 16:53:10 MET DST 1998
+
 CFLAGS=-O2
 LDFLAGS=-lm
 
@@ -48,8 +52,11 @@ ID: $(ID_objs)
 	$(CC) $(LDFLAGS) -o ID $(ID_objs)
 
 .m4.o:
-	m4 $*.m4 utm.c.m4 >$*.c
+	m4 $< utm.c.m4 >$*.c
 	$(CC) $(CFLAGS) -c $*.c -o $*.o
+
+.m4.hp48:
+	m4 $*.m4 utmtables_hp48.m4 >$*.hp48
 
 IN.m4: genutm
 	genutm -a 6378388.000 -e 0.0067226700223332915 -k 0.9996 \
@@ -93,12 +100,6 @@ utm.hp48: utm.hp48.m4 $(modulos_hp48)
 $(modulos_hp48): utmtables_hp48.m4
 
 $(modulos_o): utm.c.m4
-
-.m4.hp48:
-	m4 $*.m4 utmtables_hp48.m4 >$*.hp48
-.m4.o:
-	m4 $*.m4 $*.m4 utm.c.m4 >$*.c
-	$(CC) $(CFLAGS) -c $*.c -o $*.o
 
 genutm_objs = genutm.o
 genutm: $(genutm_objs)
