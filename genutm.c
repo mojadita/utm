@@ -1,7 +1,12 @@
-/* $Id: genutm.c,v 2.6 1998/08/24 13:04:47 luis Exp $
+/* $Id: genutm.c,v 2.7 2002/09/06 00:12:11 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Sun May 10 15:25:27 MET DST 1998
  * $Log: genutm.c,v $
+ * Revision 2.7  2002/09/06 00:12:11  luis
+ * Añadidos utm_ini.h para que genutm pueda calcular por tabla los parámetros y
+ * utmcalc.c para los cálculos a partir de los parámetros calculados según la
+ * estructura utmparam.
+ *
  * Revision 2.6  1998/08/24 13:04:47  luis
  * Changes in nomenclature of Reference Ellipsoid Names to agree with
  * WGS 1984 document.
@@ -45,6 +50,7 @@
 
 /* eccentricity of earth (EURO50) squared */
 #define ELLIPSOID	"International 1924"  /* */
+#define NAME		"IN"
 #define E2 0.0067226700223332915        /* International 1924 */
 #define A  6378388.000                  /* International 1924 */
 /*#define ELLIPSOID	"WGS 1984"  /* */
@@ -58,12 +64,13 @@
 #define N 1024
 
 /* Number of terms used in fourier series */
-#define NTERM 8
+#define NTERM 10
 
 double e2 = E2;
 double a = A;
 double k0 = K0;
 char *desc = ELLIPSOID;
+char *name = NAME;
 
 /* N equatorial radius at point of latitude l given in terms of A */
 double n(double l)
@@ -724,12 +731,13 @@ int main (int argc, char **argv)
 	int i, opt;
 	extern char *optarg;
 
-  while ((opt = getopt(argc, argv, "e:a:k:c:")) != EOF) {
+  while ((opt = getopt(argc, argv, "e:a:k:c:n:")) != EOF) {
     switch (opt){
     case 'e': e2=atof(optarg); break;
     case 'a': a=atof(optarg); break;
     case 'k': k0=atof(optarg); break;
     case 'c': desc = optarg; break;
+    case 'n': name = optarg; break;
     default:
       fprintf (stderr,
        "usage: genutm [ -e eccentricity ] [ -a equatorial radius ] "
@@ -740,149 +748,152 @@ int main (int argc, char **argv)
 
   printf ("divert(-1)\n");
   printf ("define(ELLIPSOID, ``%s'')\n", desc);
-  printf ("define(A,%0.17lG)\n", a);
-  printf ("define(E2,%0.17lG)\n", e2);
-  printf ("define(K0,%0.17lG)\n", k0);
+  printf ("define(NAME, ``%s'')\n", name);
+  printf ("define(A,%0.17lf)\n", a);
+  printf ("define(B,%0.17lf)\n", a*sqrt(1-e2));
+  printf ("define(E2,%0.17lf)\n", e2);
+  printf ("define(AK0,%0.17lf)\n", a*k0);
   printf ("define(NTERM,%d)\n", NTERM);
 
   for (i = 0; i < NTERM; i++) {
     Mcos[i] = (i & 1) ? 0.0 : C_Fourier_cos(m, i, N)/M_PI;
 
-    printf ("define(Mcos_%d,%0.17lG)\n", i, Mcos[i]);
+    printf ("define(Mcos_%d,%0.17lf)\n", i, Mcos[i]);
   }
 
   for (i=0; i < NTERM; i++) {
     Ncos[i] = (i&1) ? 0.0 : C_Fourier_cos(n, i, N)/M_PI;
-    printf ("define(Ncos_%d,%0.17lG)\n", i, Ncos[i]);
+    printf ("define(Ncos_%d,%0.17lf)\n", i, Ncos[i]);
   }
   Betasin[0] = Mcos[0];
-  printf ("define(BetaPhi,%0.17lG)\n", Betasin[0]);
-  printf ("define(BetaPhi_deg,%0.17lG)\n", Betasin[0]/180.0*M_PI);
+  printf ("define(BetaPhi,%0.17lf)\n", Betasin[0]);
+  printf ("define(BetaPhi_deg,%0.17lf)\n", Betasin[0]/180.0*M_PI);
+  printf ("define(Betasin_0, 0.0)\n");
   for (i = 1; i < NTERM; i++) {
     Betasin[i] = Mcos[i]/i;
-    printf ("define(Betasin_%d,%0.17lG)\n", i, Betasin[i]);
+    printf ("define(Betasin_%d,%0.17lf)\n", i, Betasin[i]);
   }
   for (i=0;i<NTERM; i++) {
     A1cos[i] = (i&1) ? C_Fourier_cos(preA1, i, N)/M_PI : 0.0;
-    printf ("define(A1cos_%d,%0.17lG)\n", i, A1cos[i]);
+    printf ("define(A1cos_%d,%0.17lf)\n", i, A1cos[i]);
   }
   for (i=0; i<NTERM; i++) {
     A2sin[i] = (i&1) ? 0.0 : C_Fourier_sin(preA2, i, N)/M_PI;
-    printf ("define(A2sin_%d,%0.17lG)\n", i, A2sin[i]);
+    printf ("define(A2sin_%d,%0.17lf)\n", i, A2sin[i]);
   }
   for (i=0; i<NTERM; i++) {
     A3cos[i] = (i&1) ? C_Fourier_cos(preA3, i, N)/M_PI : 0.0;
-    printf ("define(A3cos_%d,%0.17lG)\n", i, A3cos[i]);
+    printf ("define(A3cos_%d,%0.17lf)\n", i, A3cos[i]);
   }
   for (i=0; i<NTERM; i++) {
     A4sin[i] = (i&1) ? 0.0 : C_Fourier_sin(preA4, i, N)/M_PI;
-    printf ("define(A4sin_%d,%0.17lG)\n", i, A4sin[i]);
+    printf ("define(A4sin_%d,%0.17lf)\n", i, A4sin[i]);
   }
   for (i=0; i<NTERM; i++) {
     A5cos[i] = (i&1) ? C_Fourier_cos(preA5, i, N)/M_PI : 0.0;
-    printf ("define(A5cos_%d,%0.17lG)\n", i, A5cos[i]);
+    printf ("define(A5cos_%d,%0.17lf)\n", i, A5cos[i]);
   }
   for (i=0; i<NTERM; i++) {
     A6sin[i] = (i&1) ? 0.0 : C_Fourier_sin(preA6, i, N)/M_PI;
-    printf ("define(A6sin_%d,%0.17lG)\n", i, A6sin[i]);
+    printf ("define(A6sin_%d,%0.17lf)\n", i, A6sin[i]);
   }
 
   for (i=0; i<NTERM; i++) {
     Ateb1cos[i] = (i&1) ? 0.0 : C_Fourier_cos(preAteb1, i, N)/M_PI;
-    printf ("define(Ateb1cos_%d,%0.17lG)\n", i, Ateb1cos[i]);
-    printf ("define(Ateb1cos_deg_%d,%0.17lG)\n", i, Ateb1cos[i]*180.0/M_PI);
+    printf ("define(Ateb1cos_%d,%0.17lf)\n", i, Ateb1cos[i]);
+    printf ("define(Ateb1cos_deg_%d,%0.17lf)\n", i, Ateb1cos[i]*180.0/M_PI);
   }
   for (i=0; i<NTERM; i++) {
     Ateb2sin[i] = (i&1) ? 0.0 : C_Fourier_sin(preAteb2, i, N)/M_PI;
-    printf ("define(Ateb2sin_%d,%0.17lG)\n", i, Ateb2sin[i]);
-    printf ("define(Ateb2sin_deg_%d,%0.17lG)\n", i, Ateb2sin[i]*180.0/M_PI);
+    printf ("define(Ateb2sin_%d,%0.17lf)\n", i, Ateb2sin[i]);
+    printf ("define(Ateb2sin_deg_%d,%0.17lf)\n", i, Ateb2sin[i]*180.0/M_PI);
   }
   for (i=0; i<NTERM; i++) {
     Ateb3cos[i] = (i&1) ? 0.0 : C_Fourier_cos(preAteb3, i, N)/M_PI;
-    printf ("define(Ateb3cos_%d,%0.17lG)\n", i, Ateb3cos[i]);
-    printf ("define(Ateb3cos_deg_%d,%0.17lG)\n", i, Ateb3cos[i]*180.0/M_PI);
+    printf ("define(Ateb3cos_%d,%0.17lf)\n", i, Ateb3cos[i]);
+    printf ("define(Ateb3cos_deg_%d,%0.17lf)\n", i, Ateb3cos[i]*180.0/M_PI);
   }
   for (i=0; i<NTERM; i++) {
     Ateb4sin[i] = (i&1) ? 0.0 : C_Fourier_sin(preAteb4, i, N)/M_PI;
-    printf ("define(Ateb4sin_%d,%0.17lG)\n", i, Ateb4sin[i]);
-    printf ("define(Ateb4sin_deg_%d,%0.17lG)\n", i, Ateb4sin[i]*180.0/M_PI);
+    printf ("define(Ateb4sin_%d,%0.17lf)\n", i, Ateb4sin[i]);
+    printf ("define(Ateb4sin_deg_%d,%0.17lf)\n", i, Ateb4sin[i]*180.0/M_PI);
   }
   for (i=0; i<NTERM; i++) {
     Ateb5cos[i] = (i&1) ? 0.0 : C_Fourier_cos(preAteb5, i, N)/M_PI;
-    printf ("define(Ateb5cos_%d,%0.17lG)\n", i, Ateb5cos[i]);
-    printf ("define(Ateb5cos_deg_%d,%0.17lG)\n", i, Ateb5cos[i]*180.0/M_PI);
+    printf ("define(Ateb5cos_%d,%0.17lf)\n", i, Ateb5cos[i]);
+    printf ("define(Ateb5cos_deg_%d,%0.17lf)\n", i, Ateb5cos[i]*180.0/M_PI);
   }
   for (i=0; i<NTERM; i++) {
     Ateb6sin[i] = (i&1) ? 0.0 : C_Fourier_sin(preAteb6, i, N)/M_PI;
-    printf ("define(Ateb6sin_%d,%0.17lG)\n", i, Ateb6sin[i]);
-    printf ("define(Ateb6sin_deg_%d,%0.17lG)\n", i, Ateb6sin[i]*180.0/M_PI);
+    printf ("define(Ateb6sin_%d,%0.17lf)\n", i, Ateb6sin[i]);
+    printf ("define(Ateb6sin_deg_%d,%0.17lf)\n", i, Ateb6sin[i]*180.0/M_PI);
   }
   BetaPI = Beta(M_PI);
-  printf ("define(BetaPI,%0.17lG)\n", BetaPI);
+  printf ("define(BetaPI,%0.17lf)\n", BetaPI);
   for (i=0; i < NTERM; i++) {
     F1cos[i] = (i&1) ? 0.0 : C_Fourier_cos(preF1, i, N)/M_PI;
-    printf ("define(F1cos_%d,%0.17lG)\n", i, F1cos[i]);
-    printf ("define(F1cos_deg_%d,%0.17lG)\n", i, F1cos[i]*180.0/M_PI);
+    printf ("define(F1cos_%d,%0.17lf)\n", i, F1cos[i]);
+    printf ("define(F1cos_deg_%d,%0.17lf)\n", i, F1cos[i]*180.0/M_PI);
   }
   for (i=0; i < NTERM; i++) {
     F2sin[i] = (i&1) ? C_Fourier_sin(preF2, i, N)/M_PI : 0.0;
-    printf ("define(F2sin_%d,%0.17lG)\n", i, F2sin[i]);
-    printf ("define(F2sin_deg_%d,%0.17lG)\n", i, F2sin[i]*180.0/M_PI);
+    printf ("define(F2sin_%d,%0.17lf)\n", i, F2sin[i]);
+    printf ("define(F2sin_deg_%d,%0.17lf)\n", i, F2sin[i]*180.0/M_PI);
   }
   for (i=0; i < NTERM; i++) {
     F3cos[i] = (i&1) ? 0.0 : C_Fourier_cos(preF3, i, N)/M_PI;
-    printf ("define(F3cos_%d,%0.17lG)\n", i, F3cos[i]);
-    printf ("define(F3cos_deg_%d,%0.17lG)\n", i, F3cos[i]*180.0/M_PI);
+    printf ("define(F3cos_%d,%0.17lf)\n", i, F3cos[i]);
+    printf ("define(F3cos_deg_%d,%0.17lf)\n", i, F3cos[i]*180.0/M_PI);
   }
   for (i=0; i < NTERM; i++) {
     F4sin[i] = (i&1) ? C_Fourier_sin(preF4, i, N)/M_PI : 0.0;
-    printf ("define(F4sin_%d,%0.17lG)\n", i, F4sin[i]);
-    printf ("define(F4sin_deg_%d,%0.17lG)\n", i, F4sin[i]*180.0/M_PI);
+    printf ("define(F4sin_%d,%0.17lf)\n", i, F4sin[i]);
+    printf ("define(F4sin_deg_%d,%0.17lf)\n", i, F4sin[i]*180.0/M_PI);
   }
   for (i=0; i < NTERM; i++) {
     F5cos[i] = (i&1) ? 0.0 : C_Fourier_cos(preF5, i, N)/M_PI;
-    printf ("define(F5cos_%d,%0.17lG)\n", i, F5cos[i]);
-    printf ("define(F5cos_deg_%d,%0.17lG)\n", i, F5cos[i]*180.0/M_PI);
+    printf ("define(F5cos_%d,%0.17lf)\n", i, F5cos[i]);
+    printf ("define(F5cos_deg_%d,%0.17lf)\n", i, F5cos[i]*180.0/M_PI);
   }
   for (i=0; i < NTERM; i++) {
     F6sin[i] = (i&1) ? C_Fourier_sin(preF6, i, N)/M_PI : 0.0;
-    printf ("define(F6sin_%d,%0.17lG)\n", i, F6sin[i]);
-    printf ("define(F6sin_deg_%d,%0.17lG)\n", i, F6sin[i]*180.0/M_PI);
+    printf ("define(F6sin_%d,%0.17lf)\n", i, F6sin[i]);
+    printf ("define(F6sin_deg_%d,%0.17lf)\n", i, F6sin[i]*180.0/M_PI);
   }
 
   for (i=0; i < NTERM; i++) {
     dQ2Lat1cos[i] = (i&1) ? C_Fourier_cos(predQ2Lat1, i, N)/M_PI : 0.0;
-    printf ("define(dQ2Lat1cos_%d,%0.17lG)\n", i, dQ2Lat1cos[i]);
-    printf ("define(dQ2Lat1cos_deg_%d,%0.17lG)\n", i, dQ2Lat1cos[i]*180.0/M_PI);
+    printf ("define(dQ2Lat1cos_%d,%0.17lf)\n", i, dQ2Lat1cos[i]);
+    printf ("define(dQ2Lat1cos_deg_%d,%0.17lf)\n", i, dQ2Lat1cos[i]*180.0/M_PI);
   }
   for (i=0; i < NTERM; i++) {
     dQ2Lat2sin[i] = (i&1) ? 0.0 : C_Fourier_sin(predQ2Lat2, i, N)/M_PI;
-    printf ("define(dQ2Lat2sin_%d,%0.17lG)\n", i, dQ2Lat2sin[i]);
-    printf ("define(dQ2Lat2sin_deg_%d,%0.17lG)\n", i, dQ2Lat2sin[i]*180.0/M_PI);
+    printf ("define(dQ2Lat2sin_%d,%0.17lf)\n", i, dQ2Lat2sin[i]);
+    printf ("define(dQ2Lat2sin_deg_%d,%0.17lf)\n", i, dQ2Lat2sin[i]*180.0/M_PI);
   }
   for (i=0; i < NTERM; i++) {
     dQ2Lat3cos[i] = (i&1) ? C_Fourier_cos(predQ2Lat3, i, N)/M_PI : 0.0;
-    printf ("define(dQ2Lat3cos_%d,%0.17lG)\n", i, dQ2Lat3cos[i]);
-    printf ("define(dQ2Lat3cos_deg_%d,%0.17lG)\n", i, dQ2Lat3cos[i]*180.0/M_PI);
+    printf ("define(dQ2Lat3cos_%d,%0.17lf)\n", i, dQ2Lat3cos[i]);
+    printf ("define(dQ2Lat3cos_deg_%d,%0.17lf)\n", i, dQ2Lat3cos[i]*180.0/M_PI);
   }
   for (i=0; i < NTERM; i++) {
     dQ2Lat4sin[i] = (i&1) ? 0.0 : C_Fourier_sin(predQ2Lat4, i, N)/M_PI;
-    printf ("define(dQ2Lat4sin_%d,%0.17lG)\n", i, dQ2Lat4sin[i]);
-    printf ("define(dQ2Lat4sin_deg_%d,%0.17lG)\n", i, dQ2Lat4sin[i]*180.0/M_PI);
+    printf ("define(dQ2Lat4sin_%d,%0.17lf)\n", i, dQ2Lat4sin[i]);
+    printf ("define(dQ2Lat4sin_deg_%d,%0.17lf)\n", i, dQ2Lat4sin[i]*180.0/M_PI);
   }
   for (i=0; i < NTERM; i++) {
     dQ2Lat5cos[i] = (i&1) ? C_Fourier_cos(predQ2Lat5, i, N)/M_PI : 0.0;
-    printf ("define(dQ2Lat5cos_%d,%0.17lG)\n", i, dQ2Lat5cos[i]);
-    printf ("define(dQ2Lat5cos_deg_%d,%0.17lG)\n", i, dQ2Lat5cos[i]*180.0/M_PI);
+    printf ("define(dQ2Lat5cos_%d,%0.17lf)\n", i, dQ2Lat5cos[i]);
+    printf ("define(dQ2Lat5cos_deg_%d,%0.17lf)\n", i, dQ2Lat5cos[i]*180.0/M_PI);
   }
   for (i=0; i < NTERM; i++) {
     dQ2Lat6sin[i] = (i&1) ? 0.0 : C_Fourier_sin(predQ2Lat6, i, N)/M_PI;
-    printf ("define(dQ2Lat6sin_%d,%0.17lG)\n", i, dQ2Lat6sin[i]);
-    printf ("define(dQ2Lat6sin_deg_%d,%0.17lG)\n", i, dQ2Lat6sin[i]*180.0/M_PI);
+    printf ("define(dQ2Lat6sin_%d,%0.17lf)\n", i, dQ2Lat6sin[i]);
+    printf ("define(dQ2Lat6sin_deg_%d,%0.17lf)\n", i, dQ2Lat6sin[i]*180.0/M_PI);
   }
 
   printf ("divert(0)dnl\n");
   exit(0);
 }
 
-/* $Id: genutm.c,v 2.6 1998/08/24 13:04:47 luis Exp $ */
+/* $Id: genutm.c,v 2.7 2002/09/06 00:12:11 luis Exp $ */
