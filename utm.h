@@ -1,7 +1,10 @@
-/* $Id: utm.h,v 2.3 2002/09/17 19:58:27 luis Exp $
+/* $Id: utm.h,v 2.4 2002/09/23 06:14:17 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Thu Aug 29 21:21:22 MEST 2002
  * $Log: utm.h,v $
+ * Revision 2.4  2002/09/23 06:14:17  luis
+ * Modified to support variable number of GEO_NPOT and GEO_NTERM.
+ *
  * Revision 2.3  2002/09/17 19:58:27  luis
  * Added more precision.
  *
@@ -19,54 +22,42 @@
 #define _UTM_H
 
 /* Number of terms used in fourier series */
-#define GEO_NTERM 11
-#define GEO_NPOT 9
+#ifndef GEO_NTERM
+#define GEO_NTERM 9
+#endif
+
+#ifndef GEO_NPOT
+#define GEO_NPOT 7
+#endif
+
+#ifndef GEO_K0
 #define GEO_K0	0.9996	/* UTM reduction factor */
+#endif
+
+#ifndef GEO_FALSE_EASTING
+#define GEO_FALSE_EASTING 500000.0
+#endif
+
+#ifndef GEO_FALSE_NORTHING
+#define GEO_FALSE_NORTHING	0.0
+#endif
 
 struct utmparam {
 	char *name; /* Name */
 	char *dsc; /* Description */
 	double e2; /* eccentricity, squared */
-	double A; /* Semimajor axis */
-	double B; /* Minor Semiaxis */
-	double AK0; /* A semiaxis * K0 (==0.9996) */
-	double Ncos[GEO_NTERM]; /* N calculus */
-	double Mcos[GEO_NTERM]; /* M calculus */
+	double a; /* Semimajor axis */
+	double b; /* Minor Semiaxis */
+	double ak0; /* A semiaxis * K0 (==0.9996) */
+	double N[GEO_NTERM]; /* N calculus */
+	double M[GEO_NTERM]; /* M calculus */
 	double BetaPhi; /* Beta calculus */
-	double Betasin[GEO_NTERM];
-	double A1cos[GEO_NTERM]; /* geod2utm calculus */
-	double A2sin[GEO_NTERM];
-	double A3cos[GEO_NTERM];
-	double A4sin[GEO_NTERM];
-	double A5cos[GEO_NTERM];
-	double A6sin[GEO_NTERM];
-	double A7cos[GEO_NTERM];
-	double A8sin[GEO_NTERM];
+	double Beta[GEO_NTERM];
+	double A[GEO_NPOT][GEO_NTERM]; /* geod2utm calculus */
 	double BetaPI; /* Ateb calculus */
-	double Ateb1cos[GEO_NTERM];
-	double Ateb2sin[GEO_NTERM];
-	double Ateb3cos[GEO_NTERM];
-	double Ateb4sin[GEO_NTERM];
-	double Ateb5cos[GEO_NTERM];
-	double Ateb6sin[GEO_NTERM];
-	double Ateb7cos[GEO_NTERM];
-	double Ateb8sin[GEO_NTERM];
-	double F1cos[GEO_NTERM]; /* utm2geod calculus */
-	double F2sin[GEO_NTERM];
-	double F3cos[GEO_NTERM];
-	double F4sin[GEO_NTERM];
-	double F5cos[GEO_NTERM];
-	double F6sin[GEO_NTERM];
-	double F7cos[GEO_NTERM];
-	double F8sin[GEO_NTERM];
-	double dQ2Lat1cos[GEO_NTERM];
-	double dQ2Lat2sin[GEO_NTERM];
-	double dQ2Lat3cos[GEO_NTERM];
-	double dQ2Lat4sin[GEO_NTERM];
-	double dQ2Lat5cos[GEO_NTERM];
-	double dQ2Lat6sin[GEO_NTERM];
-	double dQ2Lat7cos[GEO_NTERM];
-	double dQ2Lat8sin[GEO_NTERM];
+	double Ateb[GEO_NPOT][GEO_NTERM];
+	double F[GEO_NPOT][GEO_NTERM]; /* utm2geod calculus */
+	double dQ2Lat[GEO_NPOT][GEO_NTERM];
 }; /* struct utmparam */
 
 struct geodsys {
@@ -88,4 +79,4 @@ void geo_utm2geod (struct utmparam *gs, double x, double y,
 	double *lat, double *lon);
 
 #endif /* _UTM_H */
-/* $Id: utm.h,v 2.3 2002/09/17 19:58:27 luis Exp $ */
+/* $Id: utm.h,v 2.4 2002/09/23 06:14:17 luis Exp $ */

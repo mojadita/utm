@@ -10,22 +10,28 @@ define(`defineTable',`$1
 ifndef(`PREFIX',define(PREFIX,`'))
 divert(0)dnl
 `%%HP: T(3)A(D)F(.);
-@ $Id: utm.hp48.m4,v 1.4 1998/08/25 13:50:34 luis Exp $
+@ $Id: utm.hp48.m4,v 1.5 2002/09/23 06:14:17 luis Exp $
 @ Author: Luis Colorado <luis.colorado@@slug.ctv.es>
 @ Date: Mon Aug 24 16:26:38 MET DST 1998
 DIR
   U\->G
     \<< U\-> U\->Gint \>>
+
   G\->U
     \<< G\->Uint \->U \>>
+
   Beta
     \<< Betaint A * \>>
+
   Ateb
     \<< A / Atebint \>>
+
   N
     \<< Nint A * \>>
+
   M
     \<< Mint A * \>>
+
   K
     \<< \-> l L
       \<< l L dA
@@ -34,6 +40,7 @@ DIR
         SWAP ARG "\Gd" \->TAG
       \>>
     \>>
+
   D
     \<< \-> P1 P2
       \<< P1 P2 - ABS
@@ -42,10 +49,13 @@ DIR
 	SWAP U\->G K DROP INV + 6 / *
       \>>
     \>>
+
   \->U
     \<< A * K0 * OFFSET + \>>
+
   U\->
     \<< OFFSET - A / K0 / \>>
+
   U\->Gint
     \<< C\->R 0 SWAP R\->C \-> Z
       \<< Atebint \-> L
@@ -77,6 +87,7 @@ DIR
         \>>
       \>>
     \>>
+	
   G\->Uint
     \<< D\->R \-> l L
       \<< l Vsin l Vcos 0 L R\->C Vpot \-> VS VC VP
@@ -91,10 +102,12 @@ DIR
         \>>
       \>>
     \>>
+
   Betaint
     \<< \-> L
       \<< L BetaPhi * L Vsin Betasin DOT + \>>
     \>>
+
   Atebint
     \<< \-> D
       \<< D BetaPI / 180 * \-> L
@@ -111,14 +124,17 @@ DIR
         \>>
       \>>
     \>>
+
   Mint
     \<< \-> L
       \<< L Vcos Mcos DOT \>>
     \>>
+
   Nint
     \<< \-> L
       \<< L Vcos Ncos DOT \>>
     \>>
+
   dA
     \<< D\->R \-> l L
       \<< l Vsin l Vcos 0 L R\->C Vpot \-> VS VC VP
@@ -133,8 +149,10 @@ DIR
         \>>
       \>>
     \>>
+
   \->V
     \<< 7 ROW\-> \>>
+
   CST { U\->G G\->U Beta Ateb N M
         D K A E2 K0 { "" \<< \>> }
 	UTM
@@ -156,12 +174,14 @@ DIR
         GRS80
         HELMERT1906
     }
+
   Vpot
     \<< \-> X
       \<< 1 1 6
         START DUP X * NEXT 7 ROW\->
       \>>
     \>>
+
   Vsin
     \<< \-> L
       \<<
@@ -171,6 +191,7 @@ DIR
 	8 ROW\->
       \>>
     \>>
+
   Vcos
     \<< \-> L
       \<<
@@ -180,6 +201,7 @@ DIR
 	8 ROW\->
       \>>
     \>>
+
   OFFSET (0,5E5)
 '
   EURO50 include(`IN.hp48')dnl
@@ -199,5 +221,6 @@ DIR
   EVEREST1956 include(`EC.hp48')dnl
   GRS80 include(`RF.hp48')dnl
   HELMERT1906 include(`HE.hp48')dnl
+
 END
-@ $Id: utm.hp48.m4,v 1.4 1998/08/25 13:50:34 luis Exp $
+@ $Id: utm.hp48.m4,v 1.5 2002/09/23 06:14:17 luis Exp $

@@ -1,7 +1,8 @@
-# $Id: Makefile,v 1.6 2002/09/17 19:58:27 luis Exp $
+# $Id: Makefile,v 1.7 2002/09/23 06:14:17 luis Exp $
 # Author: Luis Colorado <luis.colorado@slug.ctv.es>
 # Date: Mon Aug 24 16:53:10 MET DST 1998
 
+OPTIONS=-DGEO_NTERM=15 -DGEO_NPOT=15 -DNiter=4096
 CFLAGS=-O2 -g
 LIBS=-lm
 M4=m4
@@ -15,40 +16,49 @@ modulos = AA AM AN BN BR CC CD EA EB EC ED EE EF FA HE HO ID IN KA RF SA WD WE
 modulos_c = $(modulos:=.c)
 modulos_o = $(modulos:=.o)
 modulos_m4 = $(modulos:=.m4)
+modulos_hp48 = $(modulos:=.hp48)
 
-all: $(progs)
-modulos_c: $(modulos_c)
-modulos_m4: $(modulos_m4)
-modulos_o: $(modulos_o)
-
-utm_objs = $(modulos_o) utmcalc.o main.o
-utm: $(utm_objs)
-	$(CC) $(CFLAGS) $(LDFLAGS) $(utm_objs) $(LIBS) -o utm
+all: $(progs) Makefile $(modulos_hp48)
+modulos_c: $(modulos_c) Makefile
+modulos_m4: $(modulos_m4) Makefile
+modulos_o: $(modulos_o) Makefile
+modulos_hp48: $(modulos_hp48) Makefile
 
 .m4.c:
-	$(M4) $(M4FLAGS) $< utm.c.m4 >$*.c
+	$(M4) $(M4FLAGS) $(OPTIONS) $< utm.c.m4 >$*.c
 
-$(utm_objs): utm.h
+.m4.hp48:
+	$(M4) $(M4FLAGS) $(OPTIONS) $< utmtables_hp48.m4 >$*.hp48
 
-genutm_objs = genutm.o
-genutm: $(genutm_objs)
+.c.o:
+	$(CC) $(CFLAGS) $(OPTIONS) -c $<
+
+utm_objs = $(modulos_o) utmcalc.o main.o
+utm: $(utm_objs) Makefile
+	$(CC) $(CFLAGS) $(LDFLAGS) $(utm_objs) $(LIBS) -o utm
+$(utm_objs): utm.h Makefile
+
+genutm_objs = genutm.o utmcalc.o
+genutm: $(genutm_objs) Makefile
 	$(CC) $(LDFLAGS) $(genutm_objs) $(LIBS) -o genutm
 genutm.o: utm.h utm_ini.h
 
 pru_objs = pru.o
-pru: $(pru_objs)
+pru: $(pru_objs) Makefile
 	$(CC) $(LDFLAGS) $(pru_objs) -o pru
+pru.o: utm.h Makefile
 
 clean:
-	rm -f $(modulos_o) $(modulos_c) $(modulos_m4) $(progs)
+	rm -f $(modulos_o) $(modulos_c) $(modulos_m4) $(modulos_hp48) $(progs)
 	rm -f *.o genutm utm.hp48
 
-$(modulos_m4): genutm 
+$(modulos_m4): genutm  Makefile
 	genutm -g $* >$*.m4
 
-$(modulos_c): utm.c.m4
+$(modulos_c): utm.c.m4 Makefile
 
-$(modulos_o): utm.h
+$(modulos_o): utm.h Makefile
+$(modulos_hp48): utmtables_hp48.m4 Makefile
 
 # HE.m4: genutm
 # 	genutm -a 6378200.0 -e 0.006693421622 -k 0.9996 \

@@ -1,4 +1,4 @@
-/* $Id: main.c,v 1.2 2002/09/17 19:58:27 luis Exp $
+/* $Id: main.c,v 1.3 2002/09/23 06:14:17 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Mon Aug 10 20:15:25 MET DST 1998
  */
@@ -146,7 +146,7 @@ int main (int argc, char **argv)
   printf("PROGRAMA PARA CONVERSIÓN DE DATOS UTM/GEODESICAS\n");
   printf("(C) 2002 Luis.Colorado@hispalinux.es\n");
   printf("Sistema Geodésico: [%s] %s\n", sg->name, sg->dsc);
-  printf ("A:              %0.17lg\n", sg->A);
+  printf ("A:              %0.17lg\n", sg->a);
   printf ("E2:             %0.17lg\n", sg->e2);
 
   while (opt = menu(
@@ -235,4 +235,4 @@ int main (int argc, char **argv)
 
 } /* main */
 
-/* $Id: main.c,v 1.2 2002/09/17 19:58:27 luis Exp $ */
+/* $Id: main.c,v 1.3 2002/09/23 06:14:17 luis Exp $ */

@@ -5,21 +5,25 @@ define(`rq',changequote([,])[changequote([,])'changequote(`,')]changequote(`,'))
 define(`id', ``'$1_$2`'')
 define(`for',`ifelse(eval((`$2') <= (`$3')),1,`pushdef(`$1',`$2')`'$4`'dnl
 popdef(`$1')for(`$1',eval((`$2')+1),`$3', `$4')')')
-define(`defineTable',`{
-for(`I',0,NTERM-1,`      /* `#'I */ id(`$1',I),
+define(`defineTable',`	/* `$1' */ {
+for(`I',0,GEO_NTERM-1,`      /* `#'I */ id(`$1',I),
 ')dnl
-    } /* $1 */dnl
+	}, /* $1 */
+')
+define(`defineTable2',`  /* `$1' */ {
+for(`I',0,GEO_NPOT-1,`defineTable(id(`$1', I))')
+  }, /* $1 */
+
 ')
 
-ifdef(`X0',,`define(`X0',`0.0')')dnl
-ifdef(`Y0',,`define(`Y0',`0.0')')dnl
-ifdef(`Z0',,`define(`Z0',`0.0')')dnl
-
 divert(0)dnl
-`/* $Id: utm.c.m4,v 2.7 2002/09/17 20:18:44 luis Exp $'
+`/* $Id: utm.c.m4,v 2.8 2002/09/23 06:14:17 luis Exp $'
 ` * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>'
 ` * Date: Mon Aug 10 15:54:07 MET DST 1998'
  * $Log: utm.c.m4,v $
+ * Revision 2.8  2002/09/23 06:14:17  luis
+ * Modified to support variable number of GEO_NPOT and GEO_NTERM.
+ *
  * Revision 2.7  2002/09/17 20:18:44  luis
  * There was an unescaped `for' in a cvs comment.
  *
@@ -62,47 +66,19 @@ divert(0)dnl
 `struct utmparam geo_'NAME` = {'
 `    /* name */ "'NAME`",'
 `    /* dsc */ "'ELLIPSOID`",'
-`	/* e2 */ 'E2`,'
-`    /* A */ 'A`,'
-`    /* B */ 'B`,'
-`    /* AK0 */ 'AK0`,'
-`    /* Ncos */ 'defineTable(Ncos)`,'
-`    /* Mcos */ 'defineTable(Mcos)`,'
-`    /* BetaPhi */ 'BetaPhi`,'
-`    /* Betasin */ 'defineTable(Betasin)`,'
-`    /* A1cos */ 'defineTable(A1cos)`,'
-`    /* A2sin */ 'defineTable(A2sin)`,'
-`    /* A3cos */ 'defineTable(A3cos)`,'
-`    /* A4sin */ 'defineTable(A4sin)`,'
-`    /* A5cos */ 'defineTable(A5cos)`,'
-`    /* A6sin */ 'defineTable(A6sin)`,'
-`    /* A7cos */ 'defineTable(A7cos)`,'
-`    /* A8sin */ 'defineTable(A8sin)`,'
+`	 /* e2 */ 'E2`,'
+`    /* a */ 'Aaxis`,'
+`    /* b */ 'Baxis`,'
+`    /* ak0 */ 'ak0`,'
+defineTable(N)
+defineTable(M)
+`	 /* BetaPhi */ 'BetaPhi`,'
+defineTable(Beta)
+defineTable2(A)
 `    /* BetaPI */ 'BetaPI`,'
-`    /* Ateb1cos */ 'defineTable(Ateb1cos)`,'
-`    /* Ateb2sin */ 'defineTable(Ateb2sin)`,'
-`    /* Ateb3cos */ 'defineTable(Ateb3cos)`,'
-`    /* Ateb4sin */ 'defineTable(Ateb4sin)`,'
-`    /* Ateb5cos */ 'defineTable(Ateb5cos)`,'
-`    /* Ateb6sin */ 'defineTable(Ateb6sin)`,'
-`    /* Ateb7cos */ 'defineTable(Ateb7cos)`,'
-`    /* Ateb8sin */ 'defineTable(Ateb8sin)`,'
-`    /* F1cos */ 'defineTable(F1cos)`,'
-`    /* F2sin */ 'defineTable(F2sin)`,'
-`    /* F3cos */ 'defineTable(F3cos)`,'
-`    /* F4sin */ 'defineTable(F4sin)`,'
-`    /* F5cos */ 'defineTable(F5cos)`,'
-`    /* F6sin */ 'defineTable(F6sin)`,'
-`    /* F7cos */ 'defineTable(F7cos)`,'
-`    /* F8sin */ 'defineTable(F8sin)`,'
-`    /* dQ2Lat1cos */ 'defineTable(dQ2Lat1cos)`,'
-`    /* dQ2Lat2sin */ 'defineTable(dQ2Lat2sin)`,'
-`    /* dQ2Lat3cos */ 'defineTable(dQ2Lat3cos)`,'
-`    /* dQ2Lat4sin */ 'defineTable(dQ2Lat4sin)`,'
-`    /* dQ2Lat5cos */ 'defineTable(dQ2Lat5cos)`,'
-`    /* dQ2Lat6sin */ 'defineTable(dQ2Lat6sin)`,'
-`    /* dQ2Lat7cos */ 'defineTable(dQ2Lat7cos)`,'
-`    /* dQ2Lat8sin */ 'defineTable(dQ2Lat8sin)`'
+defineTable2(Ateb)
+defineTable2(F)
+defineTable2(dQ2Lat)
 `}; /* s_'NAME` */'
 `'
-`/* $Id: utm.c.m4,v 2.7 2002/09/17 20:18:44 luis Exp $ */'
+`/* $Id: utm.c.m4,v 2.8 2002/09/23 06:14:17 luis Exp $ */'
