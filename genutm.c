@@ -1,7 +1,11 @@
-/* $Id: genutm.c,v 2.5 1998/08/06 12:07:25 luis Exp $
+/* $Id: genutm.c,v 2.6 1998/08/24 13:04:47 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Sun May 10 15:25:27 MET DST 1998
  * $Log: genutm.c,v $
+ * Revision 2.6  1998/08/24 13:04:47  luis
+ * Changes in nomenclature of Reference Ellipsoid Names to agree with
+ * WGS 1984 document.
+ *
  * Revision 2.5  1998/08/06 12:07:25  luis
  * Found error in calculus of dQ2Lat to find the increment of latitude
  * from the increment in isometric latitude.
@@ -31,46 +35,48 @@
  *
  */
 
-#define IN_UTM_C
+#define IN_GENUTM_C
 
 /* Standard include files */
 #include <sys/types.h>
-#include <sys/time.h>
-#include <sys/socket.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <time.h>
 #include <math.h>
 
 /* eccentricity of earth (EURO50) squared */
-#define E2 0.0067226700223332915        /* Hayford 1950 */
-/*#define E2 0.0                          /* Esfera */
-/*#define E2 0.00669437999014           /* WGS84 */
-/* semi-major axis of ellipsoid */
-#define A  6378388.000                  /* Hayford 1950 */
-/*#define A 6378137.000                 /* WGS84 */
+#define ELLIPSOID	"International 1924"  /* */
+#define E2 0.0067226700223332915        /* International 1924 */
+#define A  6378388.000                  /* International 1924 */
+/*#define ELLIPSOID	"WGS 1984"  /* */
+/*#define E2 0.00669437999014           /* WGS 1984 */
+/*#define A 6378137.000                 /* WGS 1984 */
+
 /* UTM reduction constant */
 #define K0 0.9996
 
 /* Number of iterations in Simpson's numerical integration */
-#define N 2000
+#define N 1024
+
 /* Number of terms used in fourier series */
-#define NTERM 12
+#define NTERM 8
+
+double e2 = E2;
+double a = A;
+double k0 = K0;
+char *desc = ELLIPSOID;
 
 /* N equatorial radius at point of latitude l given in terms of A */
 double n(double l)
 {
   double sl = sin(l);
-  return 1.0/sqrt(1-E2*sl*sl);
+  return 1.0/sqrt(1-e2*sl*sl);
 }
 
 /* M meridianal radius at point of latitude l given in terms of A */
 double m(double l)
 {
   double nl = n(l);
-  return (1-E2)*nl*nl*nl;
+  return (1-e2)*nl*nl*nl;
 }
 
 /* Simpson's integral of function f, between a and b, subdivided in
@@ -710,324 +716,173 @@ double predQ2Lat7 (double phi)
 { return n(phi)/m(phi) * cos(phi) * derdQ2Lat6(phi) / 7.0;
 }
 
-double geod2utmX (double lat, double lon)
-{
-  double res = K0*A*(A1(lat)*lon - A3(lat)*pow(lon, 3.0) + A5(lat)*pow(lon, 5.0));
-  return res + 500000;
-}
-
-double geod2utmY (double lat, double lon)
-{
-  double res = K0*A*(Beta(lat) - A2(lat)*pow(lon, 2.0) + A4(lat)*pow(lon, 4.0) - A6(lat)*pow(lon, 6.0));
-  if (res < 0.0) res += 10000000.0;
-  return res;
-}
-
-void utm2geod (double x, double y, double *lat, double *lon)
-{
-  double phi = Ateb(y);
-  double dq;
-  dq =
-    - B2(phi) * pow(x, 2.0)
-    + B4(phi) * pow(x, 4.0)
-    - B6(phi) * pow(x, 6.0);
-  printf ("utm2geod: dq -> %0.17lg\n", dq);
-  *lon =
-    + B1(phi) * x
-    - B3(phi) * pow(x, 3.0)
-    + B5(phi) * pow(x, 5.0);
-  *lat = phi
-    + dQ2Lat1(phi) * dq
-    + dQ2Lat2(phi) * pow(dq, 2.0)
-    + dQ2Lat3(phi) * pow(dq, 3.0)
-    + dQ2Lat4(phi) * pow(dq, 4.0)
-    + dQ2Lat5(phi) * pow(dq, 5.0)
-    + dQ2Lat6(phi) * pow(dq, 6.0);
-}
-
-double hms2h (double x)
-{
-  double deg, min;
-  x = modf (x, &deg)*100.0;
-  x = modf (x, &min)*100.0;
-  return deg + min / 60.0 + x / 3600.0;
-}
-
-double h2hms (double x)
-{
-  double deg, min;
-  x = modf (x, &deg)*60.0;
-  x = modf (x, &min)*60.0;
-  return deg + min / 100.0 + x / 10000.0;
-}
-
-int huso (double l, double *L, char *zona)
-{
-  static char *t1 = "CDEFGHJKLMNPQRSTUVWXYZ";
-  int h = (int)((*L + M_PI) / M_PI * 30.0) + 1;
-  *L = fmod(*L + M_PI/2.0, M_PI/30.0) - M_PI/60.0;
-  sprintf (zona, "%2d%c", h, t1 [(int)((l + M_PI/2.25) / M_PI * 22.5)]);
-  return h;
-}
-
-char *zona (int h, double x, double y)
-{
-  static char *t1 = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-  static char res [3];
-  int xx, yy;
-  /* first letter */
-  h--;
-  xx = (int) ((x - 100000.0)/100000.0) + 8*(h % 3);
-  yy = (int) (y/100000.0) % 20 + 5*(h % 2);
-  sprintf (res, "%c%c", t1[xx], t1[yy]);
-  return res;
-}
-
-#define OPCION_FUNCIONES 1
-#define OPCION_G2U       2
-#define OPCION_U2G       4
-int opciones = 0;
-
 /* main program */
 int main (int argc, char **argv)
 {
 	char linea [1000];
 	double l, L, err;
 	int i, opt;
+	extern char *optarg;
 
-  while ((opt = getopt(argc, argv, "fgu")) != EOF) {
-    switch (opt) {
-    case 'f':
-      opciones |= OPCION_FUNCIONES; break;
-    case 'g':
-      opciones |= OPCION_U2G; break;
-    case 'u':
-      opciones |= OPCION_G2U; break;
+  while ((opt = getopt(argc, argv, "e:a:k:c:")) != EOF) {
+    switch (opt){
+    case 'e': e2=atof(optarg); break;
+    case 'a': a=atof(optarg); break;
+    case 'k': k0=atof(optarg); break;
+    case 'c': desc = optarg; break;
     default:
-      fprintf (stderr, "genutm: opción incorrecta\n");
-      break;
+      fprintf (stderr,
+       "usage: genutm [ -e eccentricity ] [ -a equatorial radius ] "
+       "[ -k red. factor ]\n");
+      exit(1);
     }
   }
-  if (!opciones) opciones |= OPCION_G2U;
 
-  if (opciones & OPCION_FUNCIONES) {
-    printf ("divert(-1)\n");
-    printf ("define(A,%0.17lg)\n", A);
-    printf ("define(E2,%0.17lg)\n", E2);
-    printf ("define(K0,%0.17lg)\n", K0);
-    printf ("define(NTERM,%d)\n", NTERM);
-  }
+  printf ("divert(-1)\n");
+  printf ("define(ELLIPSOID, ``%s'')\n", desc);
+  printf ("define(A,%0.17lG)\n", a);
+  printf ("define(E2,%0.17lG)\n", e2);
+  printf ("define(K0,%0.17lG)\n", k0);
+  printf ("define(NTERM,%d)\n", NTERM);
+
   for (i = 0; i < NTERM; i++) {
     Mcos[i] = (i & 1) ? 0.0 : C_Fourier_cos(m, i, N)/M_PI;
 
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(Mcos_%d,%0.17lg)\n", i, Mcos[i]);
+    printf ("define(Mcos_%d,%0.17lG)\n", i, Mcos[i]);
   }
 
   for (i=0; i < NTERM; i++) {
     Ncos[i] = (i&1) ? 0.0 : C_Fourier_cos(n, i, N)/M_PI;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(Ncos_%d,%0.17lg)\n", i, Ncos[i]);
+    printf ("define(Ncos_%d,%0.17lG)\n", i, Ncos[i]);
   }
   Betasin[0] = Mcos[0];
-  if (opciones & OPCION_FUNCIONES)
-    printf ("define(BetaPhi,%0.17lg)\n", Betasin[0]);
+  printf ("define(BetaPhi,%0.17lG)\n", Betasin[0]);
+  printf ("define(BetaPhi_deg,%0.17lG)\n", Betasin[0]/180.0*M_PI);
   for (i = 1; i < NTERM; i++) {
     Betasin[i] = Mcos[i]/i;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(Betasin_%d,%0.17lg)\n", i, Betasin[i]);
+    printf ("define(Betasin_%d,%0.17lG)\n", i, Betasin[i]);
   }
   for (i=0;i<NTERM; i++) {
     A1cos[i] = (i&1) ? C_Fourier_cos(preA1, i, N)/M_PI : 0.0;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(A1cos_%d,%0.17lg)\n", i, A1cos[i]);
+    printf ("define(A1cos_%d,%0.17lG)\n", i, A1cos[i]);
   }
   for (i=0; i<NTERM; i++) {
     A2sin[i] = (i&1) ? 0.0 : C_Fourier_sin(preA2, i, N)/M_PI;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(A2sin_%d,%0.17lg)\n", i, A2sin[i]);
+    printf ("define(A2sin_%d,%0.17lG)\n", i, A2sin[i]);
   }
   for (i=0; i<NTERM; i++) {
     A3cos[i] = (i&1) ? C_Fourier_cos(preA3, i, N)/M_PI : 0.0;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(A3cos_%d,%0.17lg)\n", i, A3cos[i]);
+    printf ("define(A3cos_%d,%0.17lG)\n", i, A3cos[i]);
   }
   for (i=0; i<NTERM; i++) {
     A4sin[i] = (i&1) ? 0.0 : C_Fourier_sin(preA4, i, N)/M_PI;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(A4sin_%d,%0.17lg)\n", i, A4sin[i]);
+    printf ("define(A4sin_%d,%0.17lG)\n", i, A4sin[i]);
   }
   for (i=0; i<NTERM; i++) {
     A5cos[i] = (i&1) ? C_Fourier_cos(preA5, i, N)/M_PI : 0.0;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(A5cos_%d,%0.17lg)\n", i, A5cos[i]);
+    printf ("define(A5cos_%d,%0.17lG)\n", i, A5cos[i]);
   }
   for (i=0; i<NTERM; i++) {
     A6sin[i] = (i&1) ? 0.0 : C_Fourier_sin(preA6, i, N)/M_PI;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(A6sin_%d,%0.17lg)\n", i, A6sin[i]);
+    printf ("define(A6sin_%d,%0.17lG)\n", i, A6sin[i]);
   }
 
   for (i=0; i<NTERM; i++) {
     Ateb1cos[i] = (i&1) ? 0.0 : C_Fourier_cos(preAteb1, i, N)/M_PI;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(Ateb1cos_%d,%0.17lg)\n", i, Ateb1cos[i]);
+    printf ("define(Ateb1cos_%d,%0.17lG)\n", i, Ateb1cos[i]);
+    printf ("define(Ateb1cos_deg_%d,%0.17lG)\n", i, Ateb1cos[i]*180.0/M_PI);
   }
   for (i=0; i<NTERM; i++) {
     Ateb2sin[i] = (i&1) ? 0.0 : C_Fourier_sin(preAteb2, i, N)/M_PI;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(Ateb2sin_%d,%0.17lg)\n", i, Ateb2sin[i]);
+    printf ("define(Ateb2sin_%d,%0.17lG)\n", i, Ateb2sin[i]);
+    printf ("define(Ateb2sin_deg_%d,%0.17lG)\n", i, Ateb2sin[i]*180.0/M_PI);
   }
   for (i=0; i<NTERM; i++) {
     Ateb3cos[i] = (i&1) ? 0.0 : C_Fourier_cos(preAteb3, i, N)/M_PI;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(Ateb3cos_%d,%0.17lg)\n", i, Ateb3cos[i]);
+    printf ("define(Ateb3cos_%d,%0.17lG)\n", i, Ateb3cos[i]);
+    printf ("define(Ateb3cos_deg_%d,%0.17lG)\n", i, Ateb3cos[i]*180.0/M_PI);
   }
   for (i=0; i<NTERM; i++) {
     Ateb4sin[i] = (i&1) ? 0.0 : C_Fourier_sin(preAteb4, i, N)/M_PI;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(Ateb4sin_%d,%0.17lg)\n", i, Ateb4sin[i]);
+    printf ("define(Ateb4sin_%d,%0.17lG)\n", i, Ateb4sin[i]);
+    printf ("define(Ateb4sin_deg_%d,%0.17lG)\n", i, Ateb4sin[i]*180.0/M_PI);
   }
   for (i=0; i<NTERM; i++) {
     Ateb5cos[i] = (i&1) ? 0.0 : C_Fourier_cos(preAteb5, i, N)/M_PI;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(Ateb5cos_%d,%0.17lg)\n", i, Ateb5cos[i]);
+    printf ("define(Ateb5cos_%d,%0.17lG)\n", i, Ateb5cos[i]);
+    printf ("define(Ateb5cos_deg_%d,%0.17lG)\n", i, Ateb5cos[i]*180.0/M_PI);
   }
   for (i=0; i<NTERM; i++) {
     Ateb6sin[i] = (i&1) ? 0.0 : C_Fourier_sin(preAteb6, i, N)/M_PI;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(Ateb6sin_%d,%0.17lg)\n", i, Ateb6sin[i]);
+    printf ("define(Ateb6sin_%d,%0.17lG)\n", i, Ateb6sin[i]);
+    printf ("define(Ateb6sin_deg_%d,%0.17lG)\n", i, Ateb6sin[i]*180.0/M_PI);
   }
   BetaPI = Beta(M_PI);
-  if (opciones & OPCION_FUNCIONES)
-    printf ("define(BetaPI,%0.17lg)\n", BetaPI);
+  printf ("define(BetaPI,%0.17lG)\n", BetaPI);
   for (i=0; i < NTERM; i++) {
     F1cos[i] = (i&1) ? 0.0 : C_Fourier_cos(preF1, i, N)/M_PI;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(F1cos_%d,%0.17lg)\n", i, F1cos[i]);
+    printf ("define(F1cos_%d,%0.17lG)\n", i, F1cos[i]);
+    printf ("define(F1cos_deg_%d,%0.17lG)\n", i, F1cos[i]*180.0/M_PI);
   }
   for (i=0; i < NTERM; i++) {
     F2sin[i] = (i&1) ? C_Fourier_sin(preF2, i, N)/M_PI : 0.0;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(F2sin_%d,%0.17lg)\n", i, F2sin[i]);
+    printf ("define(F2sin_%d,%0.17lG)\n", i, F2sin[i]);
+    printf ("define(F2sin_deg_%d,%0.17lG)\n", i, F2sin[i]*180.0/M_PI);
   }
   for (i=0; i < NTERM; i++) {
     F3cos[i] = (i&1) ? 0.0 : C_Fourier_cos(preF3, i, N)/M_PI;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(F3cos_%d,%0.17lg)\n", i, F3cos[i]);
+    printf ("define(F3cos_%d,%0.17lG)\n", i, F3cos[i]);
+    printf ("define(F3cos_deg_%d,%0.17lG)\n", i, F3cos[i]*180.0/M_PI);
   }
   for (i=0; i < NTERM; i++) {
     F4sin[i] = (i&1) ? C_Fourier_sin(preF4, i, N)/M_PI : 0.0;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(F4sin_%d,%0.17lg)\n", i, F4sin[i]);
+    printf ("define(F4sin_%d,%0.17lG)\n", i, F4sin[i]);
+    printf ("define(F4sin_deg_%d,%0.17lG)\n", i, F4sin[i]*180.0/M_PI);
   }
   for (i=0; i < NTERM; i++) {
     F5cos[i] = (i&1) ? 0.0 : C_Fourier_cos(preF5, i, N)/M_PI;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(F5cos_%d,%0.17lg)\n", i, F5cos[i]);
+    printf ("define(F5cos_%d,%0.17lG)\n", i, F5cos[i]);
+    printf ("define(F5cos_deg_%d,%0.17lG)\n", i, F5cos[i]*180.0/M_PI);
   }
   for (i=0; i < NTERM; i++) {
     F6sin[i] = (i&1) ? C_Fourier_sin(preF6, i, N)/M_PI : 0.0;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(F6sin_%d,%0.17lg)\n", i, F6sin[i]);
+    printf ("define(F6sin_%d,%0.17lG)\n", i, F6sin[i]);
+    printf ("define(F6sin_deg_%d,%0.17lG)\n", i, F6sin[i]*180.0/M_PI);
   }
 
   for (i=0; i < NTERM; i++) {
     dQ2Lat1cos[i] = (i&1) ? C_Fourier_cos(predQ2Lat1, i, N)/M_PI : 0.0;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(dQ2Lat1cos_%d,%0.17lg)\n", i, dQ2Lat1cos[i]);
+    printf ("define(dQ2Lat1cos_%d,%0.17lG)\n", i, dQ2Lat1cos[i]);
+    printf ("define(dQ2Lat1cos_deg_%d,%0.17lG)\n", i, dQ2Lat1cos[i]*180.0/M_PI);
   }
   for (i=0; i < NTERM; i++) {
     dQ2Lat2sin[i] = (i&1) ? 0.0 : C_Fourier_sin(predQ2Lat2, i, N)/M_PI;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(dQ2Lat2sin_%d,%0.17lg)\n", i, dQ2Lat2sin[i]);
+    printf ("define(dQ2Lat2sin_%d,%0.17lG)\n", i, dQ2Lat2sin[i]);
+    printf ("define(dQ2Lat2sin_deg_%d,%0.17lG)\n", i, dQ2Lat2sin[i]*180.0/M_PI);
   }
   for (i=0; i < NTERM; i++) {
     dQ2Lat3cos[i] = (i&1) ? C_Fourier_cos(predQ2Lat3, i, N)/M_PI : 0.0;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(dQ2Lat3cos_%d,%0.17lg)\n", i, dQ2Lat3cos[i]);
+    printf ("define(dQ2Lat3cos_%d,%0.17lG)\n", i, dQ2Lat3cos[i]);
+    printf ("define(dQ2Lat3cos_deg_%d,%0.17lG)\n", i, dQ2Lat3cos[i]*180.0/M_PI);
   }
   for (i=0; i < NTERM; i++) {
     dQ2Lat4sin[i] = (i&1) ? 0.0 : C_Fourier_sin(predQ2Lat4, i, N)/M_PI;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(dQ2Lat4sin_%d,%0.17lg)\n", i, dQ2Lat4sin[i]);
+    printf ("define(dQ2Lat4sin_%d,%0.17lG)\n", i, dQ2Lat4sin[i]);
+    printf ("define(dQ2Lat4sin_deg_%d,%0.17lG)\n", i, dQ2Lat4sin[i]*180.0/M_PI);
   }
   for (i=0; i < NTERM; i++) {
     dQ2Lat5cos[i] = (i&1) ? C_Fourier_cos(predQ2Lat5, i, N)/M_PI : 0.0;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(dQ2Lat5cos_%d,%0.17lg)\n", i, dQ2Lat5cos[i]);
+    printf ("define(dQ2Lat5cos_%d,%0.17lG)\n", i, dQ2Lat5cos[i]);
+    printf ("define(dQ2Lat5cos_deg_%d,%0.17lG)\n", i, dQ2Lat5cos[i]*180.0/M_PI);
   }
   for (i=0; i < NTERM; i++) {
     dQ2Lat6sin[i] = (i&1) ? 0.0 : C_Fourier_sin(predQ2Lat6, i, N)/M_PI;
-    if (opciones & OPCION_FUNCIONES)
-      printf ("define(dQ2Lat6sin_%d,%0.17lg)\n", i, dQ2Lat6sin[i]);
+    printf ("define(dQ2Lat6sin_%d,%0.17lG)\n", i, dQ2Lat6sin[i]);
+    printf ("define(dQ2Lat6sin_deg_%d,%0.17lG)\n", i, dQ2Lat6sin[i]*180.0/M_PI);
   }
 
-  if (opciones & OPCION_FUNCIONES) {
-    printf ("divert(0)dnl\n");
-    exit(0);
-  }
-
-  if (opciones & OPCION_G2U)
-  for (;;) {
-	char z [10];
-	int h;
-	double x, y;
-	printf ("##(hh.mmssss hh.mmssss)> ");
-  	if (!gets(linea)) break;
-	l = L = 0.0;
-	sscanf (linea, "%lf%lf", &l, &L);
-
-	printf ("Lat(h.mmssss):  %0.17lg\n", l);
-	printf ("Lon(h.mmssss):  %0.17lg\n", L);
-	l = hms2h(l); L = hms2h(L);
-	printf ("Lat(deg)        %0.17lg\n", l);
-	printf ("Lon(deg)        %0.17lg\n", L);
-	l *= M_PI/180.0; L *= M_PI/180.0;
-	printf ("Lat(rad):       %0.17lg\n", l);
-	printf ("Lon(rad):       %0.17lg\n", L);
-	h = huso (l, &L, z);
-	printf ("Lon(huso):      %0.17lg\n", L);
-	printf ("M:              %0.17lg\n", A*m(l));
-	printf ("N:              %0.17lg\n", A*n(l));
-	printf ("X(m):           %0.3lf\n"
-	        "Y(m):           %0.3lf\n",
-	  x = geod2utmX(l, L), y = geod2utmY(l, L));
-	printf ("zona:            %s%s\n", z, zona(h, x, y));
-	printf ("Ateb(y):        %0.17lg\n", Ateb(y/K0/A));
-
-  }
-  if (opciones & OPCION_U2G)
-  for (;;) {
-	char z [10];
-	int h;
-	double x, y, lat, lon;
-	printf ("##(x.xxx y.yyy huso)> ");
-  	if (!gets(linea)) break;
-	sscanf (linea, "%lf%lf%i", &x, &y, &h);
-	utm2geod((x - 500000.0)/K0/A, y/K0/A, &l, &L);
-	L += ((h-30) * M_PI/30.0) - M_PI/60.0;
-
-	printf ("Huso(antes):    %d\n", h);
-	printf ("Zona(antes):    %s\n", zona(h, x, y));
-	printf ("Lat(rad):       %0.17lg\n", l);
-	printf ("Lon(rad):       %0.17lg\n", L);
-	printf ("Lat(deg)        %0.17lg\n", l * 180.0/M_PI);
-	printf ("Lon(deg)        %0.17lg\n", L * 180.0/M_PI);
-	printf ("Lat(h.mmssss)   %0.17lg\n", h2hms(l * 180.0/M_PI));
-	printf ("Lon(h.mmssss)   %0.17lg\n", h2hms(L * 180.0/M_PI));
-	h = huso (l, &L, z);
-	printf ("Huso(despues):  %d\n", h);
-	printf ("Zona(despues):  %s%s\n", z, zona(h, x, y));
-	printf ("Lon(huso/deg):  %0.17lg\n", h2hms(L * 180.0/M_PI));
-	printf ("M:              %0.17lg\n", A*m(l));
-	printf ("N:              %0.17lg\n", A*n(l));
-	printf ("X:              %0.3lf\n"
-	        "Y:              %0.3lf\n",
-	  x = geod2utmX(l, L), y = geod2utmY(l, L));
-	printf ("Ateb(y):        %0.17lg\n", Ateb(y/K0/A));
-
-  }
+  printf ("divert(0)dnl\n");
+  exit(0);
 }
 
-/* $Id: genutm.c,v 2.5 1998/08/06 12:07:25 luis Exp $ */
+/* $Id: genutm.c,v 2.6 1998/08/24 13:04:47 luis Exp $ */
