@@ -10,7 +10,7 @@ define(`defineTable',`$1
 ifndef(`PREFIX',define(PREFIX,`'))
 divert(0)dnl
 `%%HP: T(3)A(D)F(.);
-@ $Id: utm.hp48.m4,v 1.3 1998/08/24 17:43:05 luis Exp $
+@ $Id: utm.hp48.m4,v 1.4 1998/08/25 13:50:34 luis Exp $
 @ Author: Luis Colorado <luis.colorado@@slug.ctv.es>
 @ Date: Mon Aug 24 16:26:38 MET DST 1998
 DIR
@@ -135,16 +135,27 @@ DIR
     \>>
   \->V
     \<< 7 ROW\-> \>>
-  CST { UTM EURO50 WGS72 WGS84
-        U\->G G\->U
-        Beta Ateb N M D K
-        HOUGH60 INDONESIAN74
-        INTERNATIONAL24
+  CST { U\->G G\->U Beta Ateb N M
+        D K A E2 K0 { "" \<< \>> }
+	UTM
+        EURO50
+        WGS84
+        WGS72
+        HOUGH60
+        FISCHERMOD
+        AIRYMOD
         KRASSOVSKY40
-        AIRYMOD FISCHERMOD
-        SOUTHAM
-	A E2 K0 \->U U\-> U\->Gint
-    G\->Uint Betaint Atebint Mint Nint }
+        HOUGH60
+        INDONESIAN74
+        AIRY1830
+        AUSTRALIAN
+        BESSEL1841
+        CLARKE1866
+        CLARKE1880
+        EVEREST1956
+        GRS80
+        HELMERT1906
+    }
   Vpot
     \<< \-> X
       \<< 1 1 6
@@ -170,16 +181,6 @@ DIR
       \>>
     \>>
   OFFSET (0,5E5)
-  EURO50 IN
-  WGS72 WD
-  WGS84 WE
-  HOUGH60 HO
-  INDONESIAN74 ID
-  INTERNATIONAL24 IN
-  KRASSOVSKY40 KA
-  AIRYMOD AM
-  FISCHERMOD FA
-  SOUTHAM SA
 '
   EURO50 include(`IN.hp48')dnl
   WGS84 include(`WE.hp48')dnl
@@ -199,4 +200,4 @@ DIR
   GRS80 include(`RF.hp48')dnl
   HELMERT1906 include(`HE.hp48')dnl
 END
-@ $Id: utm.hp48.m4,v 1.3 1998/08/24 17:43:05 luis Exp $
+@ $Id: utm.hp48.m4,v 1.4 1998/08/25 13:50:34 luis Exp $
