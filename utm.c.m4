@@ -10,12 +10,16 @@ for(`I',0,NTERM-1,`    id(`$1',I),   /* #I */
 ')dnl
 }; /* $1 */
 ')
-define(PREFIX,`')
+ifndef(`PREFIX',define(PREFIX,`'))
 divert(0)dnl
-/* $Id: utm.c.m4,v 1.1 1998/08/17 13:43:24 luis Exp $
+/* $Id: utm.c.m4,v 2.0 1998/08/17 18:50:13 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Mon Aug 10 15:54:07 MET DST 1998
  * $Log: utm.c.m4,v $
+ * Revision 2.0  1998/08/17 18:50:13  luis
+ * Inclusion of Linear Deformation Modulus `K' and meridian convergence for
+ * ease of distance and azimuth calculus.
+ *
  * Revision 1.1  1998/08/17 13:43:24  luis
  * Initial revision
  *
@@ -43,249 +47,205 @@ char *PREFIX`'dsc = `ELLIPSOID';
 
 /* Number of terms used in fourier series */
 #`define' `NTERM' NTERM
+#`define' NPOT 7
 
-static double f(double (*g)(double), double t[], double x)
+static double dot(double a[], double b[], int n)
 { int i;
   double res = 0.0;
-  `for' (i=0; i < `NTERM'; i++)
-    res += t[i] * g((double) i * x);
+  `for' (i=0; i < n; i++)
+    res += a[i]*b[i];
   return res;
+}
+
+static void vfourier(double v[], double x, double(*f)(double))
+{ int i;
+  double aux = 0.0;
+
+  `for' (i=0; i < `NTERM'; i++) {
+    v[i] = f(aux); aux += x;
+  }
+}
+
+static void vpot(double v[], double x)
+{ int i;
+  double aux = 1.0;
+  `for' (i=0; i < `NTERM'; i++) {
+    v[i] = aux; aux *= x;
+  }
+}
+
+static double ffourier(double (*f)(double), double t[], double x)
+{ double v[`NTERM'];
+
+  vfourier(v, x, f);
+  return dot(v, t, `NTERM');
 }
 
 /* N equatorial radius at point of latitude l given in terms of `A' */
 defineTable(`Ncos')
 double PREFIX`'n(double l)
-{
-  return f(cos,Ncos, l);
+{ return ffourier(cos,Ncos, l);
 }
 
 /* M meridianal radius at point of latitude l given in terms of `A' */
 defineTable(`Mcos')
 double PREFIX`'m(double l)
-{
-  return f(cos,Mcos, l);
+{ return ffourier(cos,Mcos, l);
 }
 
 /* `Beta', distance from point to equator */
-double `BetaPhi' = BetaPhi;
+static double PREFIX`BetaPhi' = BetaPhi;
 define(`Betasin_0',0)dnl
 defineTable(`Betasin')
 double PREFIX`'Beta(double x)  /* Beta */
 {
-  return x*`BetaPhi' + f(sin,Betasin,x);
+  return x*`BetaPhi' + ffourier(sin, `Betasin', x);
 }
+#`define' BETA(x,vs) ((x)*`BetaPhi' + dot((vs),`Betasin',`NTERM'))
 
-/* `A' functions, to calculate geod->utm transformation */
+
+/* `A' tables, to calculate geod->utm transformation */
 defineTable(`A1cos')
-static double A1(double x)
-{
-  return f(cos, A1cos, x);
-}
-
 defineTable(`A2sin')
-static double A2(double x)
-{
-  return f(sin, A2sin, x);
-}
-
 defineTable(`A3cos')
-static double A3(double x)
-{
-  return f(cos, A3cos, x);
-}
-
 defineTable(`A4sin')
-static double A4(double x)
-{
-  return f(sin, A4sin, x);
-}
-
 defineTable(`A5cos')
-static double A5(double x)
-{
-  return f(cos, A5cos, x);
-}
-
 defineTable(`A6sin')
-static double A6 (double x)
+
+void PREFIX`'geod2utm (double lat, double lon, double *x, double *y)
 {
-  return f(sin, A6sin, x);
+  double vs[`NTERM'], vc[`NTERM'], vp[NPOT];
+
+  vpot(vp, lon);
+
+  if (x) {
+    vfourier(vc, lat, cos);
+    *x =
+        dot(vc, `A1cos', `NTERM') * vp[1]
+      - dot(vc, `A3cos', `NTERM') * vp[3]
+      + dot(vc, `A5cos', `NTERM') * vp[5];
+  }
+
+  if (y) {
+    vfourier(vs, lat, sin);
+    *y =
+        BETA(lat,vs)
+      - dot(vs, `A2sin', `NTERM') * vp[2]
+      + dot(vs, `A4sin', `NTERM') * vp[4]
+      - dot(vs, `A6sin', `NTERM') * vp[6];
+  }
 }
 
+/************** K ***********************/
+
+void PREFIX`'K_conv (double lat, double lon, double *kres, double *conv)
+{ double vs[`NTERM'], vc[`NTERM'], vp[NPOT];
+  double resx, resy;
+
+  vpot(vp, lon);
+  vfourier(vc, lat, cos);
+  vfourier(vs, lat, sin);
+  resy =
+      dot(vc, `A1cos', `NTERM')
+    - dot(vc, `A3cos', `NTERM') * vp[2] * 3.0
+    + dot(vc, `A5cos', `NTERM') * vp[4] * 5.0;
+  resx =
+      dot(vs, `A2sin', `NTERM') * vp[1] * 2.0
+    - dot(vs, `A4sin', `NTERM') * vp[3] * 4.0
+    + dot(vs, `A6sin', `NTERM') * vp[5] * 6.0;
+  if (kres)
+    *kres = sqrt(resx*resx+resy*resy) / dot(vc, Ncos, `NTERM') / vc[1];
+  if (conv)
+    *conv = atan2(resx, resy);
+}
 
 /************** TRANSFORMACIÓN UTM -> GEODÉSICAS ****************/
 
 /* FUNCIÓN ATEB, INVERSA DE LA FUNCIÓN BETA */
 defineTable(`Ateb1cos')
-static double Ateb1(double x)
-{
-  return f(cos, `Ateb1cos', x);
-}
-
 defineTable(`Ateb2sin')
-static double Ateb2(double x)
-{
-  return f(sin, `Ateb2sin', x);
-}
-
 defineTable(`Ateb3cos')
-static double Ateb3(double x)
-{
-  return f(cos, `Ateb3cos', x);
-}
-
 defineTable(`Ateb4sin')
-static double Ateb4(double x)
-{
-  return f(sin, `Ateb4sin', x);
-}
-
 defineTable(`Ateb5cos')
-static double Ateb5(double x)
-{
-  return f(cos, `Ateb5cos', x);
-}
-
 defineTable(`Ateb6sin')
-static double Ateb6(double x)
-{
-  return f(sin, `Ateb6sin', x);
-}
 
-double PREFIX`BetaPI' = BetaPI;
+static double `BetaPI' = BetaPI;
 
-double PREFIX`'Ateb(double x)
+double PREFIX`'Ateb(double y)
 {
-	double phi0 = x / PREFIX`BetaPI' * M_PI;
-	double x0 = PREFIX`'Beta(phi0);
-	double dx = x - x0;
-	return
-	    phi0
-	  + Ateb1(phi0) * dx
-	  + Ateb2(phi0) * dx * dx
-	  + Ateb3(phi0) * pow(dx, 3.0)
-	  + Ateb4(phi0) * pow(dx, 4.0)
-	  + Ateb5(phi0) * pow(dx, 5.0)
-	  + Ateb6(phi0) * pow(dx, 6.0);
+	double phi0 = y / `BetaPI' * M_PI;
+	double y0, dy;
+	double vs[`NTERM'], vc[`NTERM'], vp[NPOT], ateb[NPOT];
+
+	vfourier(vs, phi0, sin);
+	vfourier(vc, phi0, cos);
+	y0 = BETA(phi0,vs);
+	dy = y - y0;
+	vpot(vp, dy);
+
+	ateb[0] = phi0;
+	ateb[1] = dot(Ateb1cos,vc,`NTERM');
+	ateb[2] = dot(Ateb2sin,vs,`NTERM');
+	ateb[3] = dot(Ateb3cos,vc,`NTERM');
+	ateb[4] = dot(Ateb4sin,vs,`NTERM');
+	ateb[5] = dot(Ateb5cos,vc,`NTERM');
+	ateb[6] = dot(Ateb6sin,vs,`NTERM');
+
+	return dot(ateb, vp, NPOT);
 }
 
 
 /********** INVERSE TRANSFORMATION *********/
 
 defineTable(`F1cos')
-static double B1 (double x)
-{
-  return f(cos, `F1cos', x) / cos(x);
-}
-
 defineTable(`F2sin')
-static double B2 (double x)
-{
-  return f(sin, `F2sin', x) / pow(cos(x), 2.0);
-}
-
 defineTable(`F3cos')
-static double B3 (double x)
-{
-  return f(cos, `F3cos', x) / pow(cos(x), 3.0);
-}
-
 defineTable(`F4sin')
-static double B4 (double x)
-{
-  return f(sin, `F4sin', x) / pow(cos(x), 4.0);
-}
-
 defineTable(`F5cos')
-static double B5 (double x)
-{
-  return f(cos, `F5cos', x) / pow(cos(x), 5.0);
-}
-
 defineTable(`F6sin')
-static double B6 (double x)
-{
-  return f(sin, `F6sin', x) / pow(cos(x), 6.0);
-}
 
-/************ INCREMENT IN Q -> INCREMENT IN LATITUD **************/
 defineTable(`dQ2Lat1cos')
-static double dQ2Lat1 (double phi)
-{
-  return f(cos, `dQ2Lat1cos', phi);
-}
-
 defineTable(`dQ2Lat2sin')
-static double dQ2Lat2 (double phi)
-{
-  return f(sin, `dQ2Lat2sin', phi);
-}
-
 defineTable(`dQ2Lat3cos')
-static double dQ2Lat3 (double phi)
-{
-  return f(cos, `dQ2Lat3cos', phi);
-}
-
 defineTable(`dQ2Lat4sin')
-static double dQ2Lat4 (double phi)
-{
-  return f(sin, `dQ2Lat4sin', phi);
-}
-
 defineTable(`dQ2Lat5cos')
-static double dQ2Lat5 (double phi)
-{
-  return f(cos, `dQ2Lat5cos', phi);
-}
-
 defineTable(`dQ2Lat6sin')
-static double dQ2Lat6 (double phi)
-{
-  return f(sin, `dQ2Lat6sin', phi);
-}
-
-void PREFIX`'geod2utm (double lat, double lon, double *x, double *y)
-{
-  if (x) {
-    *x =
-        A1(lat) * lon
-      - A3(lat) * pow(lon, 3.0)
-      + A5(lat) * pow(lon, 5.0);
-  }
-  if (y) {
-    *y =
-        Beta(lat)
-      - A2(lat)*pow(lon, 2.0)
-      + A4(lat)*pow(lon, 4.0)
-      - A6(lat)*pow(lon, 6.0);
-  }
-}
 
 void PREFIX`'utm2geod (double x, double y, double *lat, double *lon)
 {
+  double vs[`NTERM'], vc[`NTERM'], vp[NPOT];
   double phi = PREFIX`'Ateb(y);
   double dq;
+
+  vpot(vp, x/cos(phi));
+
   if (lon) {
+    vfourier(vc, phi, cos);
     *lon =
-      + B1(phi) * x
-      - B3(phi) * pow(x, 3.0)
-      + B5(phi) * pow(x, 5.0);
+      + dot(vc, `F1cos', `NTERM') * vp[1]
+      - dot(vc, `F3cos', `NTERM') * vp[3]
+      + dot(vc, `F5cos', `NTERM') * vp[5];
   }
   if (lat) {
+    double aux[NPOT];
+
+    vfourier(vs, phi, sin);
     dq =
-      - B2(phi) * pow(x, 2.0)
-      + B4(phi) * pow(x, 4.0)
-      - B6(phi) * pow(x, 6.0);
-    *lat = phi
-      + dQ2Lat1(phi) * dq
-      + dQ2Lat2(phi) * pow(dq, 2.0)
-      + dQ2Lat3(phi) * pow(dq, 3.0)
-      + dQ2Lat4(phi) * pow(dq, 4.0)
-      + dQ2Lat5(phi) * pow(dq, 5.0)
-      + dQ2Lat6(phi) * pow(dq, 6.0);
+      - dot(vs, `F2sin', `NTERM') * vp[2]
+      + dot(vs, `F4sin', `NTERM') * vp[4]
+      - dot(vs, `F6sin', `NTERM') * vp[6];
+    vpot(vp, dq);
+    aux[0] = phi;
+    aux[1] = dot(`dQ2Lat1cos', vc, `NTERM');
+    aux[2] = dot(`dQ2Lat2sin', vs, `NTERM');
+    aux[3] = dot(`dQ2Lat3cos', vc, `NTERM');
+    aux[4] = dot(`dQ2Lat4sin', vs, `NTERM');
+    aux[5] = dot(`dQ2Lat5cos', vc, `NTERM');
+    aux[6] = dot(`dQ2Lat6sin', vs, `NTERM');
+
+    *lat = dot(aux,vp, NPOT);
   }
 }
 
 
-/* $Id: utm.c.m4,v 1.1 1998/08/17 13:43:24 luis Exp $ */
+/* $Id: utm.c.m4,v 2.0 1998/08/17 18:50:13 luis Exp $ */
