@@ -16,38 +16,41 @@ ifdef(`Y0',,`define(`Y0',`0.0')')dnl
 ifdef(`Z0',,`define(`Z0',`0.0')')dnl
 
 divert(0)dnl
-`/* $Id: utm.c.m4,v 2.5 2002/09/17 19:58:27 luis Exp $'
+`/* $Id: utm.c.m4,v 2.6 2002/09/17 20:16:47 luis Exp $'
 ` * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>'
 ` * Date: Mon Aug 10 15:54:07 MET DST 1998'
-` * $Log: utm.c.m4,v $
-` * Revision 2.5  2002/09/17 19:58:27  luis
-` * Added more precision.
-` *'
-` * Revision 2.4  2002/09/06 00:12:11  luis'
-` * Añadidos utm_ini.h para que genutm pueda calcular por tabla los parámetros y'
-` * utmcalc.c para los cálculos a partir de los parámetros calculados según la'
-` * estructura utmparam.'
-` *'
-` * Revision 2.3  1998/08/17 19:02:20  luis'
-` * Elimination of spanish comments in the code.'
-` *'
-` * Revision 2.2  1998/08/17 18:58:12  luis'
-` * Inclusion of Automatically generated message into the source code.'
-` *'
-` * Revision 2.1  1998/08/17 18:54:55  luis'
-` * *** empty log message ***'
-` *'
-` * Revision 2.0  1998/08/17 18:50:13  luis'
-` * Inclusion of Linear Deformation Modulus K and meridian convergence for'
-` * ease of distance and azimuth calculus.'
-` *'
-` * Revision 1.1  1998/08/17 13:43:24  luis'
-` * Initial revision'
-` *'
-` * CAUTION: THIS FILE HAS BEEN GENERATED AUTOMATICALLY FROM CONSTANTS'
-` * CALCULUS AND M4 TEMPLATE FILE.'
-` * EDIT ONLY IF YOU ARE UNABLE TO GENERATE IT AUTOMATICALLY.'
-` */'
+ * $Log: utm.c.m4,v $
+ * Revision 2.6  2002/09/17 20:16:47  luis
+ * Preparing to use [GEO_NPOT][GEO_NTERM] matrices, instead of vectors.
+ *
+ * Revision 2.5  2002/09/17 19:58:27  luis
+ * Added more precision.
+ *
+ * Revision 2.4  2002/09/06 00:12:11  luis
+ * `Añadidos' utm_ini.h para que genutm pueda calcular por tabla los parámetros y
+ * utmcalc.c para los cálculos a partir de los parámetros calculados según la
+ * estructura utmparam.
+ *
+ * Revision 2.3  1998/08/17 19:02:20  luis
+ * Elimination of spanish comments in the code.
+ *
+ * Revision 2.2  1998/08/17 18:58:12  luis
+ * Inclusion of Automatically generated message into the source code.
+ *
+ * Revision 2.1  1998/08/17 18:54:55  luis
+ * *** empty log message ***
+ *
+ * Revision 2.0  1998/08/17 18:50:13  luis
+ * Inclusion of Linear Deformation Modulus K and meridian convergence for
+ * ease of distance and azimuth calculus.
+ *
+ * Revision 1.1  1998/08/17 13:43:24  luis
+ * Initial revision
+ *
+ * CAUTION: THIS FILE HAS BEEN GENERATED AUTOMATICALLY FROM CONSTANTS
+ * CALCULUS AND M4 TEMPLATE FILE.
+ * EDIT ONLY IF YOU ARE UNABLE TO GENERATE IT AUTOMATICALLY.
+ */
 `'
 `#define IN_UTM_C'
 `'
@@ -99,4 +102,4 @@ divert(0)dnl
 `    /* dQ2Lat8sin */ 'defineTable(dQ2Lat8sin)`'
 `}; /* s_'NAME` */'
 `'
-`/* $Id: utm.c.m4,v 2.5 2002/09/17 19:58:27 luis Exp $ */'
+`/* $Id: utm.c.m4,v 2.6 2002/09/17 20:16:47 luis Exp $ */'
