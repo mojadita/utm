@@ -10,7 +10,7 @@ define(`defineTable',`$1
 ifndef(`PREFIX',define(PREFIX,`'))
 divert(0)dnl
 `%%HP: T(3)A(D)F(.);
-@ $Id: utm.hp48.m4,v 1.2 1998/08/24 16:33:36 luis Exp $
+@ $Id: utm.hp48.m4,v 1.3 1998/08/24 17:43:05 luis Exp $
 @ Author: Luis Colorado <luis.colorado@@slug.ctv.es>
 @ Date: Mon Aug 24 16:26:38 MET DST 1998
 DIR
@@ -181,14 +181,22 @@ DIR
   FISCHERMOD FA
   SOUTHAM SA
 '
-  IN include(`IN.hp48')dnl
-  WE include(`WE.hp48')dnl
-  WD include(`WD.hp48')dnl
-  SA include(`SA.hp48')dnl
-  FA include(`FA.hp48')dnl
-  AM include(`AM.hp48')dnl
-  KA include(`KA.hp48')dnl
-  HO include(`HO.hp48')dnl
-  ID include(`ID.hp48')dnl
+  EURO50 include(`IN.hp48')dnl
+  WGS84 include(`WE.hp48')dnl
+  WGS72 include(`WD.hp48')dnl
+  HOUGH60 include(`SA.hp48')dnl
+  FISCHERMOD include(`FA.hp48')dnl
+  AIRYMOD include(`AM.hp48')dnl
+  KRASSOVSKY40 include(`KA.hp48')dnl
+  HOUGH60 include(`HO.hp48')dnl
+  INDONESIAN74 include(`ID.hp48')dnl
+  AIRY1830 include(`AA.hp48')dnl
+  AUSTRALIAN include(`AN.hp48')dnl
+  BESSEL1841 include(`BR.hp48')dnl
+  CLARKE1866 include(`CC.hp48')dnl
+  CLARKE1880 include(`CD.hp48')dnl
+  EVEREST1956 include(`EC.hp48')dnl
+  GRS80 include(`RF.hp48')dnl
+  HELMERT1906 include(`HE.hp48')dnl
 END
-@ $Id: utm.hp48.m4,v 1.2 1998/08/24 16:33:36 luis Exp $
+@ $Id: utm.hp48.m4,v 1.3 1998/08/24 17:43:05 luis Exp $
