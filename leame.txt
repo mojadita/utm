@@ -1,0 +1,63 @@
+Módulo UTM.C:
+
+Los argumentos de las rutinas que representan ángulos expresan éstos
+en radianes.  Los valores devueltos representando longitudes, dan éstas
+en valores cuya unidad es el radio ecuatorial de la tierra (`a')  Para obtener
+las coordenadas en el mapa, multiplicar los valores devueltos por las
+funciones por `a' y `k0'  (x*k0*a, y*k0*a) --> (X, Y)  BETA=a*Beta(phi)
+
+`e2' es una constante que da el valor de la excentricidad del elipsoide
+empleado en los cálculos.  Esta constante no se emplea internamente, siendo
+exportada por el módulo para uso de los programas.
+
+a es una constante que da el valor en metros del radio ecuatorial del
+elipsoide empleado en los cálculos.  Esta constante no se emplea internamete,
+siendo exportada por el módulo para uso de los programas.
+
+k0 es una constante que da el valor de reducción de escala empleado para
+la transformación UTM.  Esta constante no se emplea internamente, siendo
+exportada para uso de los programas.
+
+dsc es un puntero a una cadena de caracteres describiendo el elipsoide
+empleado en los cálculos.  Tampoco se emplea internamente.
+
+double n(double phi) da el valor del radio de curvatura en direccion EW
+de la superficie del elipsoide en un punto de latitud phi.  No se emplea
+internamente.
+
+double m(double phi) da el valor del radio de curvatura en dirección NS
+de la superficie del elipsoide en un punto de latitud phi.  No se emplea
+internamente.
+
+double Beta(double phi) da el valor de la distancia desde un punto de
+latitud phi al ecuador.  Esta función se emplea internamente en los
+cálculos de Ateb, geod2utm y utm2geod.
+
+double Ateb(double y) da el valor de la latitud en un punto que dista y
+radios ecuatoriales del ecuador.  Esta función se emplea en el cálculo de
+utm2geod.
+
+void geod2utm (double lat, double lon, double *xout, double *yout) realiza la
+transformación de coordenadas geodésicas en UTM.  Devuelve los valores en
+los lugares apuntados por los punteros xout e yout.  Si cualquiera de los
+punteros es NULL, el valor correspondiente no es calculado (se ahorran
+cálculos)  La longitud esta referida al meridiano central del huso.  Las
+coordenadas devueltas por esta función son relativas a la intersección del
+meridiano central del huso con el ecuador, el punto (0,0) es dicho punto.
+No se emplea internamente.
+
+void utm2geod (double x, double y, double *lat, double *lon) realiza la
+transformacion inversa de la anterior.  Las coordenadas x e y se refieren
+al punto de intersección del meridiano central del huso con el ecuador. Las
+coordenadas devueltas son relativas (la longitud) al meridiano central.
+No se emplea internamente.
+
+void K_conv (double lat, double lon, double *Kout, double *dout) permite
+obtener para un punto de latitud lat y longitud lon (referida al meridiano
+central del huso) los valores del módulo de deformación lineal, para el
+cálculo de distancias (para obtener el modulo de deformación empleado en las
+cartas, se debe multiplicar el valor devuelto por k0) asi como el valor
+de la convergencia del meridiano en el punto referido.  No se dispone de una
+función para el cálculo de estas magnitudes en función de coordenadas X e Y,
+con lo que deberá emplearse la función de transformación de coordenadas en
+estos casos.  No se emplea internamente.
