@@ -10,9 +10,9 @@ define(`defineTable',`$1
 ifndef(`PREFIX',define(PREFIX,`'))
 divert(0)dnl
 lq
-@@ $Id: utmtables_hp48.m4,v 1.1 1998/08/24 14:29:36 luis Exp $
-@@ Autor: Luis Colorado <luis.colorado@slug.ctv.es>
-@@ Date: Mon Aug 24 16:29:12 MET DST 1998
+@ $Id: utmtables_hp48.m4,v 1.2 1998/08/24 16:33:36 luis Exp $
+@ Autor: Luis Colorado <luis.colorado@@slug.ctv.es>
+@ Date: Mon Aug 24 16:29:12 MET DST 1998
   DIR
     `A' A
     `K0' K0
@@ -48,5 +48,5 @@ lq
     defineTable(`dQ2Lat5cos',`_deg')
     defineTable(`dQ2Lat6sin',`_deg')
   END
-@ $Id: utmtables_hp48.m4,v 1.1 1998/08/24 14:29:36 luis Exp $
+@ $Id: utmtables_hp48.m4,v 1.2 1998/08/24 16:33:36 luis Exp $
 rq

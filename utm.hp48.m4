@@ -10,9 +10,9 @@ define(`defineTable',`$1
 ifndef(`PREFIX',define(PREFIX,`'))
 divert(0)dnl
 `%%HP: T(3)A(D)F(.);
-@@ $Id: utm.hp48.m4,v 1.1 1998/08/24 14:27:04 luis Exp $
-@@ Author: Luis Colorado <luis.colorado@slug.ctv.es>
-@@ Date: Mon Aug 24 16:26:38 MET DST 1998
+@ $Id: utm.hp48.m4,v 1.2 1998/08/24 16:33:36 luis Exp $
+@ Author: Luis Colorado <luis.colorado@@slug.ctv.es>
+@ Date: Mon Aug 24 16:26:38 MET DST 1998
 DIR
   U\->G
     \<< U\-> U\->Gint \>>
@@ -32,6 +32,14 @@ DIR
         l Nint / l COS / K0 *
         DUP ABS "K" \->TAG
         SWAP ARG "\Gd" \->TAG
+      \>>
+    \>>
+  D
+    \<< \-> P1 P2
+      \<< P1 P2 - ABS
+        P2 P1 DUP2 + 2 / U\->G K DROP
+	INV 4 * SWAP U\->G K DROP INV +
+	SWAP U\->G K DROP INV + 6 / *
       \>>
     \>>
   \->U
@@ -127,8 +135,15 @@ DIR
     \>>
   \->V
     \<< 7 ROW\-> \>>
-  CST { U\->G G\->U Beta Ateb N M
-    A K0 K \->U U\-> U\->Gint
+  CST { UTM EURO50 WGS72 WGS84
+        U\->G G\->U
+        Beta Ateb N M D K
+        HOUGH60 INDONESIAN74
+        INTERNATIONAL24
+        KRASSOVSKY40
+        AIRYMOD FISCHERMOD
+        SOUTHAM
+	A E2 K0 \->U U\-> U\->Gint
     G\->Uint Betaint Atebint Mint Nint }
   Vpot
     \<< \-> X
@@ -154,7 +169,18 @@ DIR
 	8 ROW\->
       \>>
     \>>
-  OFFSET (0,5E5)'
+  OFFSET (0,5E5)
+  EURO50 IN
+  WGS72 WD
+  WGS84 WE
+  HOUGH60 HO
+  INDONESIAN74 ID
+  INTERNATIONAL24 IN
+  KRASSOVSKY40 KA
+  AIRYMOD AM
+  FISCHERMOD FA
+  SOUTHAM SA
+'
   IN include(`IN.hp48')dnl
   WE include(`WE.hp48')dnl
   WD include(`WD.hp48')dnl
@@ -165,4 +191,4 @@ DIR
   HO include(`HO.hp48')dnl
   ID include(`ID.hp48')dnl
 END
-@ $Id: utm.hp48.m4,v 1.1 1998/08/24 14:27:04 luis Exp $
+@ $Id: utm.hp48.m4,v 1.2 1998/08/24 16:33:36 luis Exp $
