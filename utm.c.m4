@@ -16,10 +16,13 @@ ifdef(`Y0',,`define(`Y0',`0.0')')dnl
 ifdef(`Z0',,`define(`Z0',`0.0')')dnl
 
 divert(0)dnl
-`/* $Id: utm.c.m4,v 2.6 2002/09/17 20:16:47 luis Exp $'
+`/* $Id: utm.c.m4,v 2.7 2002/09/17 20:18:44 luis Exp $'
 ` * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>'
 ` * Date: Mon Aug 10 15:54:07 MET DST 1998'
  * $Log: utm.c.m4,v $
+ * Revision 2.7  2002/09/17 20:18:44  luis
+ * There was an unescaped `for' in a cvs comment.
+ *
  * Revision 2.6  2002/09/17 20:16:47  luis
  * Preparing to use [GEO_NPOT][GEO_NTERM] matrices, instead of vectors.
  *
@@ -41,7 +44,7 @@ divert(0)dnl
  * *** empty log message ***
  *
  * Revision 2.0  1998/08/17 18:50:13  luis
- * Inclusion of Linear Deformation Modulus K and meridian convergence for
+ * Inclusion of Linear Deformation Modulus K and meridian convergence `for'
  * ease of distance and azimuth calculus.
  *
  * Revision 1.1  1998/08/17 13:43:24  luis
@@ -102,4 +105,4 @@ divert(0)dnl
 `    /* dQ2Lat8sin */ 'defineTable(dQ2Lat8sin)`'
 `}; /* s_'NAME` */'
 `'
-`/* $Id: utm.c.m4,v 2.6 2002/09/17 20:16:47 luis Exp $ */'
+`/* $Id: utm.c.m4,v 2.7 2002/09/17 20:18:44 luis Exp $ */'
