@@ -1,7 +1,10 @@
-/* $Id: genutm.c,v 2.7 2002/09/06 00:12:11 luis Exp $
+/* $Id: genutm.c,v 2.8 2002/09/17 19:58:27 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Sun May 10 15:25:27 MET DST 1998
  * $Log: genutm.c,v $
+ * Revision 2.8  2002/09/17 19:58:27  luis
+ * Added more precision.
+ *
  * Revision 2.7  2002/09/06 00:12:11  luis
  * Añadidos utm_ini.h para que genutm pueda calcular por tabla los parámetros y
  * utmcalc.c para los cálculos a partir de los parámetros calculados según la
@@ -16,9 +19,9 @@
  * from the increment in isometric latitude.
  *
  * Revision 2.4  1998/08/05 19:10:18  luis
- * Complete utm transformation (direct and inverse), but there must be an
+ * Complete utm transformation(direct and inverse), but there must be an
  * error as there are some errors when going far from the central meridian,
- * giving up to 6-10meters of diference between the direct transform (exact
+ * giving up to 6-10meters of diference between the direct transform(exact
  * to the milimeter) and the reverse.
  *
  * Revision 2.3  1998/08/03 22:11:55  luis
@@ -47,48 +50,41 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-
-/* eccentricity of earth (EURO50) squared */
-#define ELLIPSOID	"International 1924"  /* */
-#define NAME		"IN"
-#define E2 0.0067226700223332915        /* International 1924 */
-#define A  6378388.000                  /* International 1924 */
-/*#define ELLIPSOID	"WGS 1984"  /* */
-/*#define E2 0.00669437999014           /* WGS 1984 */
-/*#define A 6378137.000                 /* WGS 1984 */
-
-/* UTM reduction constant */
-#define K0 0.9996
+#include "utm.h"
+#include "utm_ini.h"
 
 /* Number of iterations in Simpson's numerical integration */
-#define N 1024
+#define N 3072
 
-/* Number of terms used in fourier series */
-#define NTERM 10
+struct utmparam *sg = wgs84table;
 
-double e2 = E2;
-double a = A;
-double k0 = K0;
-char *desc = ELLIPSOID;
-char *name = NAME;
+struct utmparam *lookup(char *name)
+{
+	struct utmparam *p;
+	for (p = wgs84table; p->name; p++)
+		if(!strcmp(p->name,name))
+			break;
+
+	return p->name ? p : NULL;
+} /* lookup */
 
 /* N equatorial radius at point of latitude l given in terms of A */
 double n(double l)
 {
   double sl = sin(l);
-  return 1.0/sqrt(1-e2*sl*sl);
-}
+  return 1.0 / sqrt(1 - sg->e2 * sl*sl);
+} /* n */
 
 /* M meridianal radius at point of latitude l given in terms of A */
 double m(double l)
 {
   double nl = n(l);
-  return (1-e2)*nl*nl*nl;
-}
+  return(1.0 - sg->e2) * nl*nl*nl;
+} /* m */
 
 /* Simpson's integral of function f, between a and b, subdivided in
  * n subintervals */
-double simpson (double(*f)(double),double a, double b, int n)
+double simpson(double(*f)(double),double a, double b, int n)
 {
   double t = a;
   double dt = (b - a) / (double) n;
@@ -103,34 +99,38 @@ double simpson (double(*f)(double),double a, double b, int n)
 	acum += (f1 + 4.0*f2 + f3)*dt/6.0;
 	f1 = f3;
 	t += dt;
-  }
+  } /* for */
+
   return acum;
-}
+} /* simpson */
 
 /* Auxiliary functions to calculate Fourier series. */
-double (*F)(double);
-double (*SC)(double);
+double(*F)(double);
+double(*SC)(double);
 double I;
 
-double F_Fourier (double x)
+double F_Fourier(double x)
 {
 	return F(x)*SC(I*x);
-}
+} /* F_Fourier */
 
-double C_Fourier_sin (double(*f)(double), int i, int n)
+double C_Fourier_sin(double(*f)(double), int i, int n)
 {
   F = f; SC = sin; I = i;
-  return simpson (F_Fourier, 0.0, 2.0*M_PI, n);
-}
 
-double C_Fourier_cos (double(*f)(double), int i, int n)
+  return simpson(F_Fourier, 0.0, 2.0*M_PI, n);
+} /* C_Fourier_sin */
+
+double C_Fourier_cos(double(*f)(double), int i, int n)
 {
   double result;
+
   F = f; SC = cos; I = i;
-  result = simpson (F_Fourier, 0.0, 2*M_PI, n);
-  if (i == 0) result /= 2.0;
+  result = simpson(F_Fourier, 0.0, 2*M_PI, n);
+  if(i == 0) result /= 2.0;
+
   return result;
-}
+} /* C_Fourier_cos */
 
 
 /************************************************************************
@@ -139,131 +139,189 @@ double C_Fourier_cos (double(*f)(double), int i, int n)
 
 /********* TRANSFORMACIÓN GEODÉSICAS A UTM *****************/
 
-double Mcos[NTERM];  /* To determine M */
-
-double Ncos[NTERM]; /* To determine N */
-
-double Betasin[NTERM];
-
 double Beta(double x)  /* Beta */
 {
   int i;
   double res;
-  res = x*Betasin[0];
-  for (i = 1; i < NTERM; i++)
-    res += Betasin[i] * sin(i*x);
+
+  res = x*sg->BetaPhi;
+  for (i = 1; i < GEO_NTERM; i++)
+    res += sg->Betasin[i] * sin((double)i*x);
+
   return res;
-}
+} /* Beta */
 
 double preA1(double x) /* N * cos(l) */
-{ return n(x)*cos(x);
-}
+{
+  return n(x)*cos(x);
+} /* preA1 */
 
-double A1cos[NTERM];
 
 double A1(double x)
 {
   int i;
   double res;
+
   res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += A1cos[i] * cos(i*x);
-  return res;
-}
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->A1cos[i] * cos(i*x);
 
-double preA2 (double x)
+  return res;
+} /* A1 */
+
+double preA2(double x)
 {
   int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += A1cos[i] * -i * sin (i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res -= sg->A1cos[i] * i * sin(i*x);
+
   return n(x)/m(x)*cos(x)*res/2.0;
-}
+} /* preA2 */
 
-double A2sin[NTERM];
-
-double A2 (double x)
+double A2(double x)
 {
   int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += A2sin[i] * sin (i*x);
-  return res;
-}
 
-double preA3 (double x)
-{ int i;
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->A2sin[i] * sin(i*x);
+
+  return res;
+} /* A2 */
+
+double preA3(double x)
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += A2sin[i] * i * cos (i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->A2sin[i] * i * cos(i*x);
+
   return n(x)*cos(x)/m(x)*res/3.0;
-}
+} /* preA3 */
 
-double A3cos[NTERM];
-
-double A3 (double x)
+double A3(double x)
 {
   int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += A3cos[i] * cos (i*x);
-  return res;
-}
 
-double preA4 (double x)
-{ int i;
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->A3cos[i] * cos(i*x);
+
+  return res;
+} /* A3 */
+
+double preA4(double x)
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += A3cos[i] * -i * sin (i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res -= sg->A3cos[i] * i * sin(i*x);
+
   return n(x)*cos(x)/m(x)*res/4.0;
-}
+} /* preA4 */
 
-double A4sin[NTERM];
-
-double A4 (double x)
+double A4(double x)
 {
   int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += A4sin[i] * sin (i*x);
-  return res;
-}
 
-double preA5 (double x)
-{ int i;
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->A4sin[i] * sin(i*x);
+
+  return res;
+} /* A4 */
+
+double preA5(double x)
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += A4sin[i] * i * cos (i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->A4sin[i] * i * cos(i*x);
+
   return n(x)*cos(x)/m(x)*res/5.0;
-}
+} /* preA5 */
 
-double A5cos[NTERM];
-
-double A5 (double x)
-{ int i;
+double A5(double x)
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += A5cos[i] * cos (i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->A5cos[i] * cos(i*x);
+
   return res;
-}
+} /* A5 */
 
-double preA6 (double x)
-{ int i;
+double preA6(double x)
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += A5cos[i] * -i * sin (i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res -= sg->A5cos[i] * i * sin(i*x);
+
   return n(x)*cos(x)/m(x)*res/6.0;
-}
+} /* preA6 */
 
-double A6sin[NTERM];
-
-double A6 (double x)
-{ int i;
+double A6(double x)
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += A6sin[i] * sin (i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->A6sin[i] * sin(i*x);
+
   return res;
-}
+} /* A6 */
+
+double preA7(double x)
+{
+  int i;
+  double res = 0.0;
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->A6sin[i] * i * cos(i*x);
+
+  return n(x)*cos(x)/m(x)*res/7.0;
+} /* preA7 */
+
+double A7(double x)
+{
+  int i;
+  double res = 0.0;
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->A7cos[i] * cos(i*x);
+
+  return res;
+} /* A7 */
+
+double preA8(double x)
+{
+  int i;
+  double res = 0.0;
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res -= sg->A7cos[i] * i * sin(i*x);
+
+  return n(x)*cos(x)/m(x)*res/8.0;
+} /* preA8 */
+
+double A8(double x)
+{
+  int i;
+  double res = 0.0;
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->A8sin[i] * sin(i*x);
+
+  return res;
+} /* A8 */
 
 /************** TRANSFORMACIÓN UTM -> GEODÉSICAS ****************/
 
@@ -271,151 +329,211 @@ double A6 (double x)
 double preAteb1(double x)
 {
   return 1.0/m(x);
-}
-
-double Ateb1cos[NTERM];
+} /* preAteb1 */
 
 double Ateb1(double x)
-{ int i;
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += Ateb1cos[i] * cos (i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->Ateb1cos[i] * cos(i*x);
+
   return res;
-}
+} /* Ateb1 */
 
 double derAteb1(double x)
-{ int i;
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res -= Ateb1cos[i] * i * sin (i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res -= sg->Ateb1cos[i] * i * sin(i*x);
+
   return res;
-}
+} /* derAteb1 */
 
 double preAteb2(double x)
 {
   return derAteb1(x) / m(x) / 2.0;
-}
-
-double Ateb2sin[NTERM];
+} /* preAteb2 */
 
 double Ateb2(double x)
-{ int i;
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += Ateb2sin[i] * sin (i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->Ateb2sin[i] * sin(i*x);
+
   return res;
-}
+} /* Ateb2 */
 
 double derAteb2(double x)
-{ int i;
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += Ateb2sin[i] * i * cos (i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->Ateb2sin[i] * i * cos(i*x);
+
   return res;
-}
+} /* derAteb2 */
 
 double preAteb3(double x)
 {
   return derAteb2(x) / m(x) / 3.0;
-}
-
-double Ateb3cos[NTERM];
+} /* preAteb3 */
 
 double Ateb3(double x)
-{ int i;
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += Ateb3cos[i] * cos (i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->Ateb3cos[i] * cos(i*x);
+
   return res;
-}
+} /* Ateb3 */
 
 double derAteb3(double x)
-{ int i;
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res -= Ateb3cos[i] * i * sin (i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res -= sg->Ateb3cos[i] * i * sin(i*x);
+
   return res;
-}
+} /* derAteb3 */
 
 double preAteb4(double x)
 {
   return derAteb3(x) / m(x) / 4.0;
-}
-
-double Ateb4sin[NTERM];
+} /* preAteb4 */
 
 double Ateb4(double x)
-{ int i;
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += Ateb4sin[i] * sin (i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->Ateb4sin[i] * sin(i*x);
+
   return res;
-}
+} /* Ateb4 */
 
 double derAteb4(double x)
-{ int i;
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += Ateb4sin[i] * i * cos (i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->Ateb4sin[i] * i * cos(i*x);
+
   return res;
-}
+} /* derAteb4 */
 
 double preAteb5(double x)
 {
   return derAteb4(x) / m(x) / 5.0;
-}
-
-double Ateb5cos[NTERM];
+} /* preAteb5 */
 
 double Ateb5(double x)
-{ int i;
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += Ateb5cos[i] * cos (i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->Ateb5cos[i] * cos(i*x);
+
   return res;
-}
+} /* Ateb5 */
 
 double derAteb5(double x)
-{ int i;
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res -= Ateb5cos[i] * i * sin (i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res -= sg->Ateb5cos[i] * i * sin(i*x);
+
   return res;
-}
+} /* derAteb5 */
 
 double preAteb6(double x)
 {
   return derAteb5(x) / m(x) / 6.0;
-}
-
-double Ateb6sin[NTERM];
+} /* preAteb6 */
 
 double Ateb6(double x)
-{ int i;
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += Ateb6sin[i] * sin (i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->Ateb6sin[i] * sin(i*x);
+
   return res;
-}
+} /* Ateb6 */
 
 double derAteb6(double x)
-{ int i;
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += Ateb6sin[i] * i * cos (i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->Ateb6sin[i] * i * cos(i*x);
+
   return res;
-}
+} /* derAteb6 */
 
 double preAteb7(double x)
 {
   return derAteb6(x) / m(x) / 7.0;
-}
+} /* preAteb7 */
 
-double BetaPI;
+double Ateb7(double x)
+{
+  int i;
+  double res = 0.0;
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->Ateb7cos[i] * cos(i*x);
+
+  return res;
+} /* Ateb7 */
+
+double derAteb7(double x)
+{
+  int i;
+  double res = 0.0;
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res -= sg->Ateb7cos[i] * i * sin(i*x);
+
+  return res;
+} /* derAteb7 */
+
+double preAteb8(double x)
+{
+  return derAteb7(x) / m(x) / 8.0;
+} /* preAteb8 */
+
+double Ateb8(double x)
+{
+  int i;
+  double res = 0.0;
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->Ateb8sin[i] * sin(i*x);
+
+  return res;
+} /* Ateb8 */
 
 double Ateb(double x)
 {
-	double phi0 = x / BetaPI * M_PI;
+	double phi0 = x / sg->BetaPI * M_PI;
 	double x0 = Beta(phi0);
 	double dx = x - x0;
 	return
@@ -425,475 +543,746 @@ double Ateb(double x)
 	  + Ateb3(phi0) * pow(dx, 3.0)
 	  + Ateb4(phi0) * pow(dx, 4.0)
 	  + Ateb5(phi0) * pow(dx, 5.0)
-	  + Ateb6(phi0) * pow(dx, 6.0);
-}
-
+	  + Ateb6(phi0) * pow(dx, 6.0)
+	  + Ateb7(phi0) * pow(dx, 7.0)
+	  + Ateb8(phi0) * pow(dx, 8.0);
+} /* Ateb */
 
 /*******************/
 
-double preF1 (double x)
+double preF1(double x)
 {
   return 1.0/n(x);
-}
+} /* preF1 */
 
-double F1cos[NTERM];
-
-double F1 (double x)
-{ int i;
-  double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += F1cos[i] * cos (i*x);
-  return res;
-}
-
-double B1 (double x)
-{ return F1(x) / cos(x);
-}
-
-double B1_(double x)
-{ return 1.0 / n(x) / cos(x);
-}
-
-double dF1 (double x)
-{ int i;
-  double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res -= i*F1cos[i] * sin (i*x);
-    return res;
-}
-
-double preF2 (double x)
+double F1(double x)
 {
-  return (dF1(x)*cos(x) + F1(x)*sin(x))/m(x)/2.0;
-}
-
-double F2sin[NTERM];
-
-double F2 (double x)
-{  int i;
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += F2sin[i] * sin (i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->F1cos[i] * cos(i*x);
+
   return res;
-}
+} /* F1 */
 
-double B2 (double x)
-{ return F2(x)/pow(cos(x), 2.0);
-}
+double B1(double x)
+{
+  return F1(x) / cos(x);
+} /* B1 */
 
-double B2_(double x)
-{ return sin(x)/2.0/pow(n(x)*cos(x), 2.0);
-}
-
-double dF2 (double x)
-{ int i;
+double dF1(double x)
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += i*F2sin[i] * cos (i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res -= i * sg->F1cos[i] * sin(i*x);
+
   return res;
-}
+} /* dF1 */
 
-double preF3 (double x)
-{ return (dF2(x) * cos(x) + 2.0 * F2(x) * sin(x))/3.0/m(x);
-}
+double preF2(double x)
+{
+  return(dF1(x)*cos(x) + F1(x)*sin(x))/m(x)/2.0;
+} /* preF2 */
 
-double F3cos [NTERM];
-
-double F3 (double x)
-{ int i;
+double F2(double x)
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += F3cos [i] * cos(i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->F2sin[i] * sin(i*x);
+
   return res;
-}
+} /* F2 */
 
-double B3 (double x)
-{ return F3(x)/pow(cos(x), 3.0);
-}
+double B2(double x)
+{
+  return F2(x)/pow(cos(x), 2.0);
+} /* B2 */
 
-double dF3 (double x)
-{ int i;
+double dF2(double x)
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res -= i*F3cos [i] * sin(i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += i * sg->F2sin[i] * cos(i*x);
+
   return res;
-}
+} /* dF2 */
 
-double preF4 (double x)
-{ return (dF3(x)*cos(x) + 3.0*F3(x)*sin(x))/4.0/m(x);
-}
+double preF3(double x)
+{
+  return(dF2(x) * cos(x) + 2.0 * F2(x) * sin(x))/3.0/m(x);
+} /* preF3 */
 
-double F4sin[NTERM];
-
-double F4 (double x)
-{ int i;
+double F3(double x)
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += F4sin[i] * sin (i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->F3cos[i] * cos(i*x);
+
   return res;
-}
+} /* F3 */
 
-double B4 (double x)
-{ return F4(x)/pow(cos(x), 4.0); }
+double B3(double x)
+{
+  return F3(x)/pow(cos(x), 3.0);
+} /* B3 */
 
-double dF4 (double x)
-{ int i;
+double dF3(double x)
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += i*F4sin [i] * cos(i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res -= i * sg->F3cos[i] * sin(i*x);
+
   return res;
-}
+} /* dF3 */
 
-double preF5 (double x)
-{ return (dF4(x)*cos(x) + 4.0*F4(x)*sin(x))/5.0/m(x);
-}
+double preF4(double x)
+{
+  return(dF3(x)*cos(x) + 3.0*F3(x)*sin(x))/4.0/m(x);
+} /* preF4 */
 
-double F5cos[NTERM];
-
-double F5 (double x)
-{ int i;
+double F4(double x)
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += F5cos[i] * cos (i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->F4sin[i] * sin(i*x);
+
   return res;
-}
+} /* F4 */
 
-double B5 (double x)
-{ return F5(x)/pow(cos(x), 5.0); }
+double B4(double x)
+{
+  return F4(x)/pow(cos(x), 4.0);
+} /* B4 */
 
-double dF5 (double x)
-{ int i;
+double dF4(double x)
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res -= i*F5cos [i] * sin(i*x);
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += i * sg->F4sin [i] * cos(i*x);
+
   return res;
-}
+} /* dF4 */
 
-double preF6 (double x)
-{ return (dF5(x)*cos(x) + 5.0*F5(x)*sin(x))/6.0/m(x);
-}
+double preF5(double x)
+{
+  return(dF4(x)*cos(x) + 4.0*F4(x)*sin(x))/5.0/m(x);
+} /* preF5 */
 
-double F6sin[NTERM];
-
-double F6 (double x)
-{ int i;
+double F5(double x)
+{
+  int i;
   double res = 0.0;
-  for (i = 0; i < NTERM; i++)
-    res += F6sin[i] * sin (i*x);
-  return res;
-}
 
-double B6 (double x)
-{ return F6(x)/pow(cos(x), 6.0); }
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->F5cos[i] * cos(i*x);
+
+  return res;
+} /* F5 */
+
+double B5(double x)
+{
+  return F5(x)/pow(cos(x), 5.0);
+} /* B5 */
+
+double dF5(double x)
+{
+  int i;
+  double res = 0.0;
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res -= i * sg->F5cos [i] * sin(i*x);
+
+  return res;
+} /* dF5 */
+
+double preF6(double x)
+{
+  return(dF5(x)*cos(x) + 5.0*F5(x)*sin(x))/6.0/m(x);
+} /* preF6 */
+
+double F6(double x)
+{
+  int i;
+  double res = 0.0;
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->F6sin[i] * sin(i*x);
+
+  return res;
+} /* F6 */
+
+double B6(double x)
+{
+  return F6(x)/pow(cos(x), 6.0);
+} /* B6 */
+
+double dF6(double x)
+{
+  int i;
+  double res = 0.0;
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += i * sg->F6sin [i] * cos(i*x);
+
+  return res;
+} /* dF6 */
+
+double preF7(double x)
+{
+  return(dF6(x)*cos(x) + 6.0*F6(x)*sin(x))/7.0/m(x);
+} /* preF7 */
+
+double F7(double x)
+{
+  int i;
+  double res = 0.0;
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->F7cos[i] * cos(i*x);
+
+  return res;
+} /* F7 */
+
+double B7(double x)
+{
+  return F7(x)/pow(cos(x), 7.0);
+} /* B7 */
+
+double dF7(double x)
+{
+  int i;
+  double res = 0.0;
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res -= i * sg->F7cos [i] * sin(i*x);
+
+  return res;
+} /* dF7 */
+
+double preF8(double x)
+{
+  return(dF7(x)*cos(x) + 7.0*F7(x)*sin(x))/8.0/m(x);
+} /* preF8 */
+
+double F8(double x)
+{
+  int i;
+  double res = 0.0;
+
+  for (i = 0; i < GEO_NTERM; i++)
+    res += sg->F8sin[i] * sin(i*x);
+
+  return res;
+} /* F8 */
+
+double B8(double x)
+{
+  return F8(x)/pow(cos(x), 8.0);
+} /* B8 */
 
 /************ INCREMENTO DE Q -> INCREMENTO DE LATITUD **************/
-double predQ2Lat1 (double phi)
-{ return n(phi)/m(phi)*cos(phi);
-}
 
-double dQ2Lat1cos[NTERM];
+double predQ2Lat1(double phi)
+{
+  return n(phi)/m(phi)*cos(phi);
+} /* predQ2Lat1 */
 
-double dQ2Lat1 (double phi)
-{ int i;
+double dQ2Lat1(double phi)
+{
+  int i;
   double res = 0.0;
-  for (i=0; i < NTERM; i++)
-    res += dQ2Lat1cos[i] * cos(i*phi);
-  return res;
-}
 
-double derdQ2Lat1 (double phi)
-{ int i;
+  for (i=0; i < GEO_NTERM; i++)
+    res += sg->dQ2Lat1cos[i] * cos(i*phi);
+
+  return res;
+} /* dQ2Lat1 */
+
+double derdQ2Lat1(double phi)
+{
+  int i;
   double res = 0.0;
-  for (i=0; i < NTERM; i++)
-    res -= dQ2Lat1cos[i] * i * sin(i*phi);
+
+  for (i=0; i < GEO_NTERM; i++)
+    res -= sg->dQ2Lat1cos[i] * i * sin(i*phi);
+
   return res;
-}
+} /* derdQ2Lat1 */
 
-double predQ2Lat2 (double phi)
-{ return n(phi)/m(phi) * cos(phi) * derdQ2Lat1(phi) / 2.0;
-}
+double predQ2Lat2(double phi)
+{
+  return n(phi)/m(phi) * cos(phi) * derdQ2Lat1(phi) / 2.0;
+} /* predQ2Lat2 */
 
-double dQ2Lat2sin[NTERM];
-
-double dQ2Lat2 (double phi)
-{ int i;
+double dQ2Lat2(double phi)
+{
+  int i;
   double res = 0.0;
-  for (i=0; i < NTERM; i++)
-    res += dQ2Lat2sin[i] * sin(i*phi);
-  return res;
-}
 
-double derdQ2Lat2 (double phi)
-{ int i;
+  for (i=0; i < GEO_NTERM; i++)
+    res += sg->dQ2Lat2sin[i] * sin(i*phi);
+
+  return res;
+} /* dQ2Lat2 */
+
+double derdQ2Lat2(double phi)
+{
+  int i;
   double res = 0.0;
-  for (i=0; i < NTERM; i++)
-    res += dQ2Lat2sin[i] * i * cos(i*phi);
+
+  for (i=0; i < GEO_NTERM; i++)
+    res += sg->dQ2Lat2sin[i] * i * cos(i*phi);
+
   return res;
-}
+} /* derdQ2Lat2 */
 
-double predQ2Lat3 (double phi)
-{ return n(phi)/m(phi) * cos(phi) * derdQ2Lat2(phi) / 3.0;
-}
+double predQ2Lat3(double phi)
+{
+  return n(phi)/m(phi) * cos(phi) * derdQ2Lat2(phi) / 3.0;
+} /* predQ2Lat3 */
 
-double dQ2Lat3cos[NTERM];
-
-double dQ2Lat3 (double phi)
-{ int i;
+double dQ2Lat3(double phi)
+{
+  int i;
   double res = 0.0;
-  for (i=0; i < NTERM; i++)
-    res += dQ2Lat3cos[i] * cos(i*phi);
-  return res;
-}
 
-double derdQ2Lat3 (double phi)
-{ int i;
+  for (i=0; i < GEO_NTERM; i++)
+    res += sg->dQ2Lat3cos[i] * cos(i*phi);
+
+  return res;
+} /* dQ2Lat3 */
+
+double derdQ2Lat3(double phi)
+{
+  int i;
   double res = 0.0;
-  for (i=0; i < NTERM; i++)
-    res -= dQ2Lat3cos[i] * i * sin(i*phi);
+
+  for (i=0; i < GEO_NTERM; i++)
+    res -= sg->dQ2Lat3cos[i] * i * sin(i*phi);
+
   return res;
-}
+} /* derdQ2Lat3 */
 
-double predQ2Lat4 (double phi)
-{ return n(phi)/m(phi) * cos(phi) * derdQ2Lat3(phi) / 4.0;
-}
+double predQ2Lat4(double phi)
+{
+  return n(phi)/m(phi) * cos(phi) * derdQ2Lat3(phi) / 4.0;
+} /* predQ2Lat4 */
 
-double dQ2Lat4sin[NTERM];
-
-double dQ2Lat4 (double phi)
-{ int i;
+double dQ2Lat4(double phi)
+{
+  int i;
   double res = 0.0;
-  for (i=0; i < NTERM; i++)
-    res += dQ2Lat4sin[i] * sin(i*phi);
-  return res;
-}
 
-double derdQ2Lat4 (double phi)
-{ int i;
+  for (i=0; i < GEO_NTERM; i++)
+    res += sg->dQ2Lat4sin[i] * sin(i*phi);
+
+  return res;
+} /* dQ2Lat4 */
+
+double derdQ2Lat4(double phi)
+{
+  int i;
   double res = 0.0;
-  for (i=0; i < NTERM; i++)
-    res += dQ2Lat4sin[i] * i * cos(i*phi);
+
+  for (i=0; i < GEO_NTERM; i++)
+    res += sg->dQ2Lat4sin[i] * i * cos(i*phi);
+
   return res;
-}
+} /* derdQ2Lat4 */
 
-double predQ2Lat5 (double phi)
-{ return n(phi)/m(phi) * cos(phi) * derdQ2Lat4(phi) / 5.0;
-}
+double predQ2Lat5(double phi)
+{
+  return n(phi)/m(phi) * cos(phi) * derdQ2Lat4(phi) / 5.0;
+} /* predQ2Lat5 */
 
-double dQ2Lat5cos[NTERM];
-
-double dQ2Lat5 (double phi)
-{ int i;
+double dQ2Lat5(double phi)
+{
+  int i;
   double res = 0.0;
-  for (i=0; i < NTERM; i++)
-    res += dQ2Lat5cos[i] * cos(i*phi);
-  return res;
-}
 
-double derdQ2Lat5 (double phi)
-{ int i;
+  for (i=0; i < GEO_NTERM; i++)
+    res += sg->dQ2Lat5cos[i] * cos(i*phi);
+
+  return res;
+} /* dQ2Lat5 */
+
+double derdQ2Lat5(double phi)
+{
+  int i;
   double res = 0.0;
-  for (i=0; i < NTERM; i++)
-    res -= dQ2Lat5cos[i] * i * sin(i*phi);
+
+  for (i=0; i < GEO_NTERM; i++)
+    res -= sg->dQ2Lat5cos[i] * i * sin(i*phi);
+
   return res;
-}
+} /* derdQ2Lat5 */
 
-double predQ2Lat6 (double phi)
-{ return n(phi)/m(phi) * cos(phi) * derdQ2Lat5(phi) / 6.0;
-}
+double predQ2Lat6(double phi)
+{
+  return n(phi)/m(phi) * cos(phi) * derdQ2Lat5(phi) / 6.0;
+} /* predQ2Lat6 */
 
-double dQ2Lat6sin[NTERM];
-
-double dQ2Lat6 (double phi)
-{ int i;
+double dQ2Lat6(double phi)
+{
+  int i;
   double res = 0.0;
-  for (i=0; i < NTERM; i++)
-    res += dQ2Lat6sin[i] * sin(i*phi);
-  return res;
-}
 
-double derdQ2Lat6 (double phi)
-{ int i;
+  for (i=0; i < GEO_NTERM; i++)
+    res += sg->dQ2Lat6sin[i] * sin(i*phi);
+
+  return res;
+} /* dQ2Lat6 */
+
+double derdQ2Lat6(double phi)
+{
+  int i;
   double res = 0.0;
-  for (i=0; i < NTERM; i++)
-    res += dQ2Lat6sin[i] * i * cos(i*phi);
+
+  for (i=0; i < GEO_NTERM; i++)
+    res += sg->dQ2Lat6sin[i] * i * cos(i*phi);
+
   return res;
-}
+} /* derdQ2Lat6 */
 
-double predQ2Lat7 (double phi)
-{ return n(phi)/m(phi) * cos(phi) * derdQ2Lat6(phi) / 7.0;
-}
+double predQ2Lat7(double phi)
+{
+  return n(phi)/m(phi) * cos(phi) * derdQ2Lat6(phi) / 7.0;
+} /* predQ2Lat7 */
 
+double dQ2Lat7(double phi)
+{
+  int i;
+  double res = 0.0;
+
+  for (i=0; i < GEO_NTERM; i++)
+    res += sg->dQ2Lat7cos[i] * cos(i*phi);
+
+  return res;
+} /* dQ2Lat7 */
+
+double derdQ2Lat7(double phi)
+{
+  int i;
+  double res = 0.0;
+
+  for (i=0; i < GEO_NTERM; i++)
+    res -= sg->dQ2Lat7cos[i] * i * sin(i*phi);
+
+  return res;
+} /* derdQ2Lat7 */
+
+double predQ2Lat8(double phi)
+{
+  return n(phi)/m(phi) * cos(phi) * derdQ2Lat7(phi) / 8.0;
+} /* predQ2Lat8 */
+
+double dQ2Lat8(double phi)
+{
+  int i;
+  double res = 0.0;
+
+  for (i=0; i < GEO_NTERM; i++)
+    res += sg->dQ2Lat8sin[i] * sin(i*phi);
+
+  return res;
+} /* dQ2Lat8 */
+
+/*******************************************************************/
+/*******************************************************************/
 /* main program */
-int main (int argc, char **argv)
+int main(int argc, char **argv)
 {
 	char linea [1000];
 	double l, L, err;
 	int i, opt;
 	extern char *optarg;
 
-  while ((opt = getopt(argc, argv, "e:a:k:c:n:")) != EOF) {
-    switch (opt){
-    case 'e': e2=atof(optarg); break;
-    case 'a': a=atof(optarg); break;
-    case 'k': k0=atof(optarg); break;
-    case 'c': desc = optarg; break;
-    case 'n': name = optarg; break;
+  while((opt = getopt(argc, argv, "g:")) != EOF) {
+    switch(opt){
+    case 'g': sg=lookup(optarg);
+		if(!sg) {
+			fprintf(stderr, "Sistema Geodésico desconocido(%s)\n", optarg);
+			exit(1);
+		}
+		break;
     default:
-      fprintf (stderr,
-       "usage: genutm [ -e eccentricity ] [ -a equatorial radius ] "
-       "[ -k red. factor ]\n");
+      fprintf(stderr,
+       "usage: genutm [ -g geodsystem ]\n");
       exit(1);
     }
   }
 
-  printf ("divert(-1)\n");
-  printf ("define(ELLIPSOID, ``%s'')\n", desc);
-  printf ("define(NAME, ``%s'')\n", name);
-  printf ("define(A,%0.17lf)\n", a);
-  printf ("define(B,%0.17lf)\n", a*sqrt(1-e2));
-  printf ("define(E2,%0.17lf)\n", e2);
-  printf ("define(AK0,%0.17lf)\n", a*k0);
-  printf ("define(NTERM,%d)\n", NTERM);
+  printf("divert(-1)\n");
+  printf("define(ELLIPSOID, ``%s'')\n", sg->dsc);
+  printf("define(NAME, ``%s'')\n", sg->name);
+  printf("define(A,%0.17lG)\n", sg->A);
+  printf("define(B,%0.17lG)\n", sg->A*sqrt(1-sg->e2));
+  printf("define(E2,%0.17lG)\n", sg->e2);
+  printf("define(AK0,%0.17lG)\n", sg->A*GEO_K0);
+  printf("define(NTERM,%d)\n", GEO_NTERM);
 
-  for (i = 0; i < NTERM; i++) {
-    Mcos[i] = (i & 1) ? 0.0 : C_Fourier_cos(m, i, N)/M_PI;
-
-    printf ("define(Mcos_%d,%0.17lf)\n", i, Mcos[i]);
-  }
-
-  for (i=0; i < NTERM; i++) {
-    Ncos[i] = (i&1) ? 0.0 : C_Fourier_cos(n, i, N)/M_PI;
-    printf ("define(Ncos_%d,%0.17lf)\n", i, Ncos[i]);
-  }
-  Betasin[0] = Mcos[0];
-  printf ("define(BetaPhi,%0.17lf)\n", Betasin[0]);
-  printf ("define(BetaPhi_deg,%0.17lf)\n", Betasin[0]/180.0*M_PI);
-  printf ("define(Betasin_0, 0.0)\n");
-  for (i = 1; i < NTERM; i++) {
-    Betasin[i] = Mcos[i]/i;
-    printf ("define(Betasin_%d,%0.17lf)\n", i, Betasin[i]);
-  }
-  for (i=0;i<NTERM; i++) {
-    A1cos[i] = (i&1) ? C_Fourier_cos(preA1, i, N)/M_PI : 0.0;
-    printf ("define(A1cos_%d,%0.17lf)\n", i, A1cos[i]);
-  }
-  for (i=0; i<NTERM; i++) {
-    A2sin[i] = (i&1) ? 0.0 : C_Fourier_sin(preA2, i, N)/M_PI;
-    printf ("define(A2sin_%d,%0.17lf)\n", i, A2sin[i]);
-  }
-  for (i=0; i<NTERM; i++) {
-    A3cos[i] = (i&1) ? C_Fourier_cos(preA3, i, N)/M_PI : 0.0;
-    printf ("define(A3cos_%d,%0.17lf)\n", i, A3cos[i]);
-  }
-  for (i=0; i<NTERM; i++) {
-    A4sin[i] = (i&1) ? 0.0 : C_Fourier_sin(preA4, i, N)/M_PI;
-    printf ("define(A4sin_%d,%0.17lf)\n", i, A4sin[i]);
-  }
-  for (i=0; i<NTERM; i++) {
-    A5cos[i] = (i&1) ? C_Fourier_cos(preA5, i, N)/M_PI : 0.0;
-    printf ("define(A5cos_%d,%0.17lf)\n", i, A5cos[i]);
-  }
-  for (i=0; i<NTERM; i++) {
-    A6sin[i] = (i&1) ? 0.0 : C_Fourier_sin(preA6, i, N)/M_PI;
-    printf ("define(A6sin_%d,%0.17lf)\n", i, A6sin[i]);
+  /* Mcos */
+  for (i = 0; i < GEO_NTERM; i++) {
+    sg->Mcos[i] = (i & 1) ? 0.0 : C_Fourier_cos(m, i, N)/M_PI;
+    printf("define(Mcos_%d,%0.17lG)\n", i, sg->Mcos[i]);
   }
 
-  for (i=0; i<NTERM; i++) {
-    Ateb1cos[i] = (i&1) ? 0.0 : C_Fourier_cos(preAteb1, i, N)/M_PI;
-    printf ("define(Ateb1cos_%d,%0.17lf)\n", i, Ateb1cos[i]);
-    printf ("define(Ateb1cos_deg_%d,%0.17lf)\n", i, Ateb1cos[i]*180.0/M_PI);
-  }
-  for (i=0; i<NTERM; i++) {
-    Ateb2sin[i] = (i&1) ? 0.0 : C_Fourier_sin(preAteb2, i, N)/M_PI;
-    printf ("define(Ateb2sin_%d,%0.17lf)\n", i, Ateb2sin[i]);
-    printf ("define(Ateb2sin_deg_%d,%0.17lf)\n", i, Ateb2sin[i]*180.0/M_PI);
-  }
-  for (i=0; i<NTERM; i++) {
-    Ateb3cos[i] = (i&1) ? 0.0 : C_Fourier_cos(preAteb3, i, N)/M_PI;
-    printf ("define(Ateb3cos_%d,%0.17lf)\n", i, Ateb3cos[i]);
-    printf ("define(Ateb3cos_deg_%d,%0.17lf)\n", i, Ateb3cos[i]*180.0/M_PI);
-  }
-  for (i=0; i<NTERM; i++) {
-    Ateb4sin[i] = (i&1) ? 0.0 : C_Fourier_sin(preAteb4, i, N)/M_PI;
-    printf ("define(Ateb4sin_%d,%0.17lf)\n", i, Ateb4sin[i]);
-    printf ("define(Ateb4sin_deg_%d,%0.17lf)\n", i, Ateb4sin[i]*180.0/M_PI);
-  }
-  for (i=0; i<NTERM; i++) {
-    Ateb5cos[i] = (i&1) ? 0.0 : C_Fourier_cos(preAteb5, i, N)/M_PI;
-    printf ("define(Ateb5cos_%d,%0.17lf)\n", i, Ateb5cos[i]);
-    printf ("define(Ateb5cos_deg_%d,%0.17lf)\n", i, Ateb5cos[i]*180.0/M_PI);
-  }
-  for (i=0; i<NTERM; i++) {
-    Ateb6sin[i] = (i&1) ? 0.0 : C_Fourier_sin(preAteb6, i, N)/M_PI;
-    printf ("define(Ateb6sin_%d,%0.17lf)\n", i, Ateb6sin[i]);
-    printf ("define(Ateb6sin_deg_%d,%0.17lf)\n", i, Ateb6sin[i]*180.0/M_PI);
-  }
-  BetaPI = Beta(M_PI);
-  printf ("define(BetaPI,%0.17lf)\n", BetaPI);
-  for (i=0; i < NTERM; i++) {
-    F1cos[i] = (i&1) ? 0.0 : C_Fourier_cos(preF1, i, N)/M_PI;
-    printf ("define(F1cos_%d,%0.17lf)\n", i, F1cos[i]);
-    printf ("define(F1cos_deg_%d,%0.17lf)\n", i, F1cos[i]*180.0/M_PI);
-  }
-  for (i=0; i < NTERM; i++) {
-    F2sin[i] = (i&1) ? C_Fourier_sin(preF2, i, N)/M_PI : 0.0;
-    printf ("define(F2sin_%d,%0.17lf)\n", i, F2sin[i]);
-    printf ("define(F2sin_deg_%d,%0.17lf)\n", i, F2sin[i]*180.0/M_PI);
-  }
-  for (i=0; i < NTERM; i++) {
-    F3cos[i] = (i&1) ? 0.0 : C_Fourier_cos(preF3, i, N)/M_PI;
-    printf ("define(F3cos_%d,%0.17lf)\n", i, F3cos[i]);
-    printf ("define(F3cos_deg_%d,%0.17lf)\n", i, F3cos[i]*180.0/M_PI);
-  }
-  for (i=0; i < NTERM; i++) {
-    F4sin[i] = (i&1) ? C_Fourier_sin(preF4, i, N)/M_PI : 0.0;
-    printf ("define(F4sin_%d,%0.17lf)\n", i, F4sin[i]);
-    printf ("define(F4sin_deg_%d,%0.17lf)\n", i, F4sin[i]*180.0/M_PI);
-  }
-  for (i=0; i < NTERM; i++) {
-    F5cos[i] = (i&1) ? 0.0 : C_Fourier_cos(preF5, i, N)/M_PI;
-    printf ("define(F5cos_%d,%0.17lf)\n", i, F5cos[i]);
-    printf ("define(F5cos_deg_%d,%0.17lf)\n", i, F5cos[i]*180.0/M_PI);
-  }
-  for (i=0; i < NTERM; i++) {
-    F6sin[i] = (i&1) ? C_Fourier_sin(preF6, i, N)/M_PI : 0.0;
-    printf ("define(F6sin_%d,%0.17lf)\n", i, F6sin[i]);
-    printf ("define(F6sin_deg_%d,%0.17lf)\n", i, F6sin[i]*180.0/M_PI);
+  /* Ncos */
+  for (i=0; i < GEO_NTERM; i++) {
+    sg->Ncos[i] = (i & 1) ? 0.0 : C_Fourier_cos(n, i, N)/M_PI;
+    printf("define(Ncos_%d,%0.17lG)\n", i, sg->Ncos[i]);
   }
 
-  for (i=0; i < NTERM; i++) {
-    dQ2Lat1cos[i] = (i&1) ? C_Fourier_cos(predQ2Lat1, i, N)/M_PI : 0.0;
-    printf ("define(dQ2Lat1cos_%d,%0.17lf)\n", i, dQ2Lat1cos[i]);
-    printf ("define(dQ2Lat1cos_deg_%d,%0.17lf)\n", i, dQ2Lat1cos[i]*180.0/M_PI);
-  }
-  for (i=0; i < NTERM; i++) {
-    dQ2Lat2sin[i] = (i&1) ? 0.0 : C_Fourier_sin(predQ2Lat2, i, N)/M_PI;
-    printf ("define(dQ2Lat2sin_%d,%0.17lf)\n", i, dQ2Lat2sin[i]);
-    printf ("define(dQ2Lat2sin_deg_%d,%0.17lf)\n", i, dQ2Lat2sin[i]*180.0/M_PI);
-  }
-  for (i=0; i < NTERM; i++) {
-    dQ2Lat3cos[i] = (i&1) ? C_Fourier_cos(predQ2Lat3, i, N)/M_PI : 0.0;
-    printf ("define(dQ2Lat3cos_%d,%0.17lf)\n", i, dQ2Lat3cos[i]);
-    printf ("define(dQ2Lat3cos_deg_%d,%0.17lf)\n", i, dQ2Lat3cos[i]*180.0/M_PI);
-  }
-  for (i=0; i < NTERM; i++) {
-    dQ2Lat4sin[i] = (i&1) ? 0.0 : C_Fourier_sin(predQ2Lat4, i, N)/M_PI;
-    printf ("define(dQ2Lat4sin_%d,%0.17lf)\n", i, dQ2Lat4sin[i]);
-    printf ("define(dQ2Lat4sin_deg_%d,%0.17lf)\n", i, dQ2Lat4sin[i]*180.0/M_PI);
-  }
-  for (i=0; i < NTERM; i++) {
-    dQ2Lat5cos[i] = (i&1) ? C_Fourier_cos(predQ2Lat5, i, N)/M_PI : 0.0;
-    printf ("define(dQ2Lat5cos_%d,%0.17lf)\n", i, dQ2Lat5cos[i]);
-    printf ("define(dQ2Lat5cos_deg_%d,%0.17lf)\n", i, dQ2Lat5cos[i]*180.0/M_PI);
-  }
-  for (i=0; i < NTERM; i++) {
-    dQ2Lat6sin[i] = (i&1) ? 0.0 : C_Fourier_sin(predQ2Lat6, i, N)/M_PI;
-    printf ("define(dQ2Lat6sin_%d,%0.17lf)\n", i, dQ2Lat6sin[i]);
-    printf ("define(dQ2Lat6sin_deg_%d,%0.17lf)\n", i, dQ2Lat6sin[i]*180.0/M_PI);
+  /* BetaPhi */
+  sg->BetaPhi = sg->Mcos[0];
+  printf("define(BetaPhi,%0.17lG)\n", sg->BetaPhi);
+  printf("define(BetaPhi_deg,%0.17lG)\n", sg->BetaPhi/180.0*M_PI);
+
+  /* Betasin */
+  sg->Betasin[0] = 0.0;
+  printf("define(Betasin_0,%0.17lG)\n", 0.0);
+  for (i = 1; i < GEO_NTERM; i++) {
+    sg->Betasin[i] = sg->Mcos[i]/i;
+    printf("define(Betasin_%d,%0.17lG)\n", i, sg->Betasin[i]);
   }
 
-  printf ("divert(0)dnl\n");
+  /* A1cos */
+  for (i = 0; i < GEO_NTERM; i++) {
+    sg->A1cos[i] = (i & 1) ? C_Fourier_cos(preA1, i, N)/M_PI : 0.0;
+    printf("define(A1cos_%d,%0.17lG)\n", i, sg->A1cos[i]);
+  }
+
+  /* A2sin */
+  for (i=0; i<GEO_NTERM; i++) {
+    sg->A2sin[i] = (i & 1) ? 0.0 : C_Fourier_sin(preA2, i, N)/M_PI;
+    printf("define(A2sin_%d,%0.17lG)\n", i, sg->A2sin[i]);
+  }
+
+  /* A3cos */
+  for (i=0; i<GEO_NTERM; i++) {
+    sg->A3cos[i] = (i & 1) ? C_Fourier_cos(preA3, i, N)/M_PI : 0.0;
+    printf("define(A3cos_%d,%0.17lG)\n", i, sg->A3cos[i]);
+  }
+
+  /* A4sin */
+  for (i=0; i<GEO_NTERM; i++) {
+    sg->A4sin[i] = (i & 1) ? 0.0 : C_Fourier_sin(preA4, i, N)/M_PI;
+    printf("define(A4sin_%d,%0.17lG)\n", i, sg->A4sin[i]);
+  }
+
+  /* A5cos */
+  for (i=0; i<GEO_NTERM; i++) {
+    sg->A5cos[i] = (i & 1) ? C_Fourier_cos(preA5, i, N)/M_PI : 0.0;
+    printf("define(A5cos_%d,%0.17lG)\n", i, sg->A5cos[i]);
+  }
+
+  /* A6sin */
+  for (i=0; i<GEO_NTERM; i++) {
+    sg->A6sin[i] = (i & 1) ? 0.0 : C_Fourier_sin(preA6, i, N)/M_PI;
+    printf("define(A6sin_%d,%0.17lG)\n", i, sg->A6sin[i]);
+  }
+
+  /* A7cos */
+  for (i=0; i<GEO_NTERM; i++) {
+    sg->A7cos[i] = (i & 1) ? C_Fourier_cos(preA7, i, N)/M_PI : 0.0;
+    printf("define(A7cos_%d,%0.17lG)\n", i, sg->A7cos[i]);
+  }
+
+  /* A8sin */
+  for (i=0; i<GEO_NTERM; i++) {
+    sg->A8sin[i] = (i & 1) ? 0.0 : C_Fourier_sin(preA8, i, N)/M_PI;
+    printf("define(A8sin_%d,%0.17lG)\n", i, sg->A8sin[i]);
+  }
+
+  /* Ateb1cos */
+  for (i=0; i<GEO_NTERM; i++) {
+    sg->Ateb1cos[i] = (i & 1) ? 0.0 : C_Fourier_cos(preAteb1, i, N)/M_PI;
+    printf("define(Ateb1cos_%d,%0.17lG)\n", i, sg->Ateb1cos[i]);
+    printf("define(Ateb1cos_deg_%d,%0.17lG)\n", i, sg->Ateb1cos[i]*180.0/M_PI);
+  }
+
+  /* Ateb2sin */
+  for (i=0; i<GEO_NTERM; i++) {
+    sg->Ateb2sin[i] = (i & 1) ? 0.0 : C_Fourier_sin(preAteb2, i, N)/M_PI;
+    printf("define(Ateb2sin_%d,%0.17lG)\n", i, sg->Ateb2sin[i]);
+    printf("define(Ateb2sin_deg_%d,%0.17lG)\n", i, sg->Ateb2sin[i]*180.0/M_PI);
+  }
+
+  /* Ateb3cos */
+  for (i=0; i<GEO_NTERM; i++) {
+    sg->Ateb3cos[i] = (i & 1) ? 0.0 : C_Fourier_cos(preAteb3, i, N)/M_PI;
+    printf("define(Ateb3cos_%d,%0.17lG)\n", i, sg->Ateb3cos[i]);
+    printf("define(Ateb3cos_deg_%d,%0.17lG)\n", i, sg->Ateb3cos[i]*180.0/M_PI);
+  }
+
+  /* Ateb4sin */
+  for (i=0; i<GEO_NTERM; i++) {
+    sg->Ateb4sin[i] = (i & 1) ? 0.0 : C_Fourier_sin(preAteb4, i, N)/M_PI;
+    printf("define(Ateb4sin_%d,%0.17lG)\n", i, sg->Ateb4sin[i]);
+    printf("define(Ateb4sin_deg_%d,%0.17lG)\n", i, sg->Ateb4sin[i]*180.0/M_PI);
+  }
+
+  /* Ateb5cos */
+  for (i=0; i<GEO_NTERM; i++) {
+    sg->Ateb5cos[i] = (i & 1) ? 0.0 : C_Fourier_cos(preAteb5, i, N)/M_PI;
+    printf("define(Ateb5cos_%d,%0.17lG)\n", i, sg->Ateb5cos[i]);
+    printf("define(Ateb5cos_deg_%d,%0.17lG)\n", i, sg->Ateb5cos[i]*180.0/M_PI);
+  }
+
+  /* Ateb6sin */
+  for (i=0; i<GEO_NTERM; i++) {
+    sg->Ateb6sin[i] = (i & 1) ? 0.0 : C_Fourier_sin(preAteb6, i, N)/M_PI;
+    printf("define(Ateb6sin_%d,%0.17lG)\n", i, sg->Ateb6sin[i]);
+    printf("define(Ateb6sin_deg_%d,%0.17lG)\n", i, sg->Ateb6sin[i]*180.0/M_PI);
+  }
+
+  /* Ateb7cos */
+  for (i=0; i<GEO_NTERM; i++) {
+    sg->Ateb7cos[i] = (i & 1) ? 0.0 : C_Fourier_cos(preAteb7, i, N)/M_PI;
+    printf("define(Ateb7cos_%d,%0.17lG)\n", i, sg->Ateb7cos[i]);
+    printf("define(Ateb7cos_deg_%d,%0.17lG)\n", i, sg->Ateb7cos[i]*180.0/M_PI);
+  }
+
+  /* Ateb8sin */
+  for (i=0; i<GEO_NTERM; i++) {
+    sg->Ateb8sin[i] = (i & 1) ? 0.0 : C_Fourier_sin(preAteb8, i, N)/M_PI;
+    printf("define(Ateb8sin_%d,%0.17lG)\n", i, sg->Ateb8sin[i]);
+    printf("define(Ateb8sin_deg_%d,%0.17lG)\n", i, sg->Ateb8sin[i]*180.0/M_PI);
+  }
+
+  /* BetaPI */
+  sg->BetaPI = Beta(M_PI);
+  printf("define(BetaPI,%0.17lG)\n", sg->BetaPI);
+
+  /* F1cos */
+  for (i=0; i < GEO_NTERM; i++) {
+    sg->F1cos[i] = (i & 1) ? 0.0 : C_Fourier_cos(preF1, i, N)/M_PI;
+    printf("define(F1cos_%d,%0.17lG)\n", i, sg->F1cos[i]);
+    printf("define(F1cos_deg_%d,%0.17lG)\n", i, sg->F1cos[i]*180.0/M_PI);
+  }
+
+  /* F2sin */
+  for (i=0; i < GEO_NTERM; i++) {
+    sg->F2sin[i] = (i & 1) ? C_Fourier_sin(preF2, i, N)/M_PI : 0.0;
+    printf("define(F2sin_%d,%0.17lG)\n", i, sg->F2sin[i]);
+    printf("define(F2sin_deg_%d,%0.17lG)\n", i, sg->F2sin[i]*180.0/M_PI);
+  }
+
+  /* F3cos */
+  for (i=0; i < GEO_NTERM; i++) {
+    sg->F3cos[i] = (i & 1) ? 0.0 : C_Fourier_cos(preF3, i, N)/M_PI;
+    printf("define(F3cos_%d,%0.17lG)\n", i, sg->F3cos[i]);
+    printf("define(F3cos_deg_%d,%0.17lG)\n", i, sg->F3cos[i]*180.0/M_PI);
+  }
+
+  /* F4sin */
+  for (i=0; i < GEO_NTERM; i++) {
+    sg->F4sin[i] = (i & 1) ? C_Fourier_sin(preF4, i, N)/M_PI : 0.0;
+    printf("define(F4sin_%d,%0.17lG)\n", i, sg->F4sin[i]);
+    printf("define(F4sin_deg_%d,%0.17lG)\n", i, sg->F4sin[i]*180.0/M_PI);
+  }
+
+  /* F5cos */
+  for (i=0; i < GEO_NTERM; i++) {
+    sg->F5cos[i] = (i & 1) ? 0.0 : C_Fourier_cos(preF5, i, N)/M_PI;
+    printf("define(F5cos_%d,%0.17lG)\n", i, sg->F5cos[i]);
+    printf("define(F5cos_deg_%d,%0.17lG)\n", i, sg->F5cos[i]*180.0/M_PI);
+  }
+
+  /* F6sin */
+  for (i=0; i < GEO_NTERM; i++) {
+    sg->F6sin[i] = (i & 1) ? C_Fourier_sin(preF6, i, N)/M_PI : 0.0;
+    printf("define(F6sin_%d,%0.17lG)\n", i, sg->F6sin[i]);
+    printf("define(F6sin_deg_%d,%0.17lG)\n", i, sg->F6sin[i]*180.0/M_PI);
+  }
+
+  /* F7cos */
+  for (i=0; i < GEO_NTERM; i++) {
+    sg->F7cos[i] = (i & 1) ? 0.0 : C_Fourier_cos(preF7, i, N)/M_PI;
+    printf("define(F7cos_%d,%0.17lG)\n", i, sg->F7cos[i]);
+    printf("define(F7cos_deg_%d,%0.17lG)\n", i, sg->F7cos[i]*180.0/M_PI);
+  }
+
+  /* F8sin */
+  for (i=0; i < GEO_NTERM; i++) {
+    sg->F8sin[i] = (i & 1) ? C_Fourier_sin(preF8, i, N)/M_PI : 0.0;
+    printf("define(F8sin_%d,%0.17lG)\n", i, sg->F8sin[i]);
+    printf("define(F8sin_deg_%d,%0.17lG)\n", i, sg->F8sin[i]*180.0/M_PI);
+  }
+
+  /* dQ2Lat1cos */
+  for (i=0; i < GEO_NTERM; i++) {
+    sg->dQ2Lat1cos[i] = (i & 1) ? C_Fourier_cos(predQ2Lat1, i, N)/M_PI : 0.0;
+    printf("define(dQ2Lat1cos_%d,%0.17lG)\n", i, sg->dQ2Lat1cos[i]);
+    printf("define(dQ2Lat1cos_deg_%d,%0.17lG)\n", i, sg->dQ2Lat1cos[i]*180.0/M_PI);
+  }
+
+  /* dQ2Lat2sin */
+  for (i=0; i < GEO_NTERM; i++) {
+    sg->dQ2Lat2sin[i] = (i & 1) ? 0.0 : C_Fourier_sin(predQ2Lat2, i, N)/M_PI;
+    printf("define(dQ2Lat2sin_%d,%0.17lG)\n", i, sg->dQ2Lat2sin[i]);
+    printf("define(dQ2Lat2sin_deg_%d,%0.17lG)\n", i, sg->dQ2Lat2sin[i]*180.0/M_PI);
+  }
+
+  /* dQ2Lat3cos */
+  for (i=0; i < GEO_NTERM; i++) {
+    sg->dQ2Lat3cos[i] = (i & 1) ? C_Fourier_cos(predQ2Lat3, i, N)/M_PI : 0.0;
+    printf("define(dQ2Lat3cos_%d,%0.17lG)\n", i, sg->dQ2Lat3cos[i]);
+    printf("define(dQ2Lat3cos_deg_%d,%0.17lG)\n", i, sg->dQ2Lat3cos[i]*180.0/M_PI);
+  }
+
+  /* dQ2Lat4sin */
+  for (i=0; i < GEO_NTERM; i++) {
+    sg->dQ2Lat4sin[i] = (i & 1) ? 0.0 : C_Fourier_sin(predQ2Lat4, i, N)/M_PI;
+    printf("define(dQ2Lat4sin_%d,%0.17lG)\n", i, sg->dQ2Lat4sin[i]);
+    printf("define(dQ2Lat4sin_deg_%d,%0.17lG)\n", i, sg->dQ2Lat4sin[i]*180.0/M_PI);
+  }
+
+  /* dQ2Lat5cos */
+  for (i=0; i < GEO_NTERM; i++) {
+    sg->dQ2Lat5cos[i] = (i & 1) ? C_Fourier_cos(predQ2Lat5, i, N)/M_PI : 0.0;
+    printf("define(dQ2Lat5cos_%d,%0.17lG)\n", i, sg->dQ2Lat5cos[i]);
+    printf("define(dQ2Lat5cos_deg_%d,%0.17lG)\n", i, sg->dQ2Lat5cos[i]*180.0/M_PI);
+  }
+
+  /* dQ2Lat6sin */
+  for (i=0; i < GEO_NTERM; i++) {
+    sg->dQ2Lat6sin[i] = (i & 1) ? 0.0 : C_Fourier_sin(predQ2Lat6, i, N)/M_PI;
+    printf("define(dQ2Lat6sin_%d,%0.17lG)\n", i, sg->dQ2Lat6sin[i]);
+    printf("define(dQ2Lat6sin_deg_%d,%0.17lG)\n", i, sg->dQ2Lat6sin[i]*180.0/M_PI);
+  }
+
+  /* dQ2Lat7cos */
+  for (i=0; i < GEO_NTERM; i++) {
+    sg->dQ2Lat7cos[i] = (i & 1) ? C_Fourier_cos(predQ2Lat7, i, N)/M_PI : 0.0;
+    printf("define(dQ2Lat7cos_%d,%0.17lG)\n", i, sg->dQ2Lat7cos[i]);
+    printf("define(dQ2Lat7cos_deg_%d,%0.17lG)\n", i, sg->dQ2Lat7cos[i]*180.0/M_PI);
+  }
+
+  /* dQ2Lat8sin */
+  for (i=0; i < GEO_NTERM; i++) {
+    sg->dQ2Lat8sin[i] = (i & 1) ? 0.0 : C_Fourier_sin(predQ2Lat8, i, N)/M_PI;
+    printf("define(dQ2Lat8sin_%d,%0.17lG)\n", i, sg->dQ2Lat8sin[i]);
+    printf("define(dQ2Lat8sin_deg_%d,%0.17lG)\n", i, sg->dQ2Lat8sin[i]*180.0/M_PI);
+  }
+
+  printf("divert(0)dnl\n");
   exit(0);
-}
+} /* main */
 
-/* $Id: genutm.c,v 2.7 2002/09/06 00:12:11 luis Exp $ */
+/* $Id: genutm.c,v 2.8 2002/09/17 19:58:27 luis Exp $ */

@@ -1,7 +1,10 @@
-/* $Id: utmcalc.c,v 2.1 2002/09/06 00:12:11 luis Exp $
+/* $Id: utmcalc.c,v 2.2 2002/09/17 19:58:27 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Thu Sep  5 22:44:30 MEST 2002
  * $Log: utmcalc.c,v $
+ * Revision 2.2  2002/09/17 19:58:27  luis
+ * Added more precision.
+ *
  * Revision 2.1  2002/09/06 00:12:11  luis
  * Añadidos utm_ini.h para que genutm pueda calcular por tabla los parámetros y
  * utmcalc.c para los cálculos a partir de los parámetros calculados según la
@@ -27,21 +30,23 @@ static double dot(double a[], double b[], int n)
   int i;
   double res = 0.0;
 
-  for (i=0; i < n; i++)
-    res += a[i]*b[i];
+  for (i = 0; i < n; i++)
+    res += a[i] * b[i];
 
   return res;
 } /* dot */
 
-/* this function gets a vector of components to be used later in several
- * calculus of fourier series */
+/* this function constructs a vector of components to be used later in several
+ * calculus of fourier series. v gets instantiated to sin or cos.
+ */
 static void vfourier(double v[], int n, double x, double(*f)(double))
 {
   int i;
   double aux = 0.0;
 
-  for (i=0; i < n; i++) {
-    v[i] = f(aux); aux += x;
+  for (i = 0; i < n; i++) {
+    v[i] = f(aux);
+	aux += x;
   }
 } /* vfourier */
 
@@ -52,13 +57,14 @@ static void vpot(double v[], int n, double x)
   int i;
   double aux = 1.0;
 
-  for (i=0; i < n; i++) {
-    v[i] = aux; aux *= x;
+  for (i = 0; i < n; i++) {
+    v[i] = aux;
+	aux *= x;
   }
 } /* vpot */
 
 /* this function gets the fourier approximation of t[] components on x
- * from sin() or cos() (passed as a parameter) */
+ * from sin() or cos() (pointer passed as a parameter) */
 static double fourier_s(double (*f)(double), double t[], double x)
 {
   double v[GEO_NTERM];
@@ -104,7 +110,9 @@ void geo_geod2utm (struct utmparam *gs, double lat, double lon,
     *x = gs->AK0 * (
         dot(vc, gs->A1cos, GEO_NTERM) * vp[1]
       - dot(vc, gs->A3cos, GEO_NTERM) * vp[3]
-      + dot(vc, gs->A5cos, GEO_NTERM) * vp[5]);
+      + dot(vc, gs->A5cos, GEO_NTERM) * vp[5]
+      - dot(vc, gs->A7cos, GEO_NTERM) * vp[7]
+	  ) + 500000.0;
   }
 
   if (y) {
@@ -114,7 +122,9 @@ void geo_geod2utm (struct utmparam *gs, double lat, double lon,
         BETA(lat,vs)
       - dot(vs, gs->A2sin, GEO_NTERM) * vp[2]
       + dot(vs, gs->A4sin, GEO_NTERM) * vp[4]
-      - dot(vs, gs->A6sin, GEO_NTERM) * vp[6]);
+      - dot(vs, gs->A6sin, GEO_NTERM) * vp[6]
+	  + dot(vs, gs->A8sin, GEO_NTERM) * vp[8]
+	  );
   }
 } /* geo_geod2utm */
 
@@ -130,17 +140,24 @@ void geo_K_conv (struct utmparam *gs, double lat, double lon,
   vfourier(vs, GEO_NTERM, lat, sin);
 
   resy =
-      dot(vc, gs->A1cos, GEO_NTERM)
+      dot(vc, gs->A1cos, GEO_NTERM) /* ... * vp[0] * 1.0 */
     - dot(vc, gs->A3cos, GEO_NTERM) * vp[2] * 3.0
-    + dot(vc, gs->A5cos, GEO_NTERM) * vp[4] * 5.0;
+    + dot(vc, gs->A5cos, GEO_NTERM) * vp[4] * 5.0
+    - dot(vc, gs->A7cos, GEO_NTERM) * vp[6] * 7.0
+	;
 
   resx =
       dot(vs, gs->A2sin, GEO_NTERM) * vp[1] * 2.0
     - dot(vs, gs->A4sin, GEO_NTERM) * vp[3] * 4.0
-    + dot(vs, gs->A6sin, GEO_NTERM) * vp[5] * 6.0;
+    + dot(vs, gs->A6sin, GEO_NTERM) * vp[5] * 6.0
+    - dot(vs, gs->A8sin, GEO_NTERM) * vp[7] * 8.0
+	;
 
   if (kres)
-    *kres = sqrt(resx*resx+resy*resy) / dot(vc, gs->Ncos, GEO_NTERM) / vc[1];
+    *kres = sqrt(resx*resx+resy*resy)
+		/ dot(vc, gs->Ncos, GEO_NTERM)
+		/ vc[1]
+		* GEO_K0;
 
   if (conv)
     *conv = atan2(resx, resy);
@@ -153,7 +170,7 @@ double geo_Ateb(struct utmparam *gs, double y)
 	double y0, dy;
 	double vs[GEO_NTERM], vc[GEO_NTERM], vp[GEO_NPOT], ateb[GEO_NPOT];
 
-	y /= gs->AK0;
+	y /= gs->A;
 
 	phi0 = y / gs->BetaPI * M_PI;
 	vfourier(vs, GEO_NTERM, phi0, sin);
@@ -169,6 +186,8 @@ double geo_Ateb(struct utmparam *gs, double y)
 	ateb[4] = dot(gs->Ateb4sin,vs,GEO_NTERM);
 	ateb[5] = dot(gs->Ateb5cos,vc,GEO_NTERM);
 	ateb[6] = dot(gs->Ateb6sin,vs,GEO_NTERM);
+	ateb[7] = dot(gs->Ateb7cos,vc,GEO_NTERM);
+	ateb[8] = dot(gs->Ateb8sin,vs,GEO_NTERM);
 
 	return dot(ateb, vp, GEO_NPOT);
 } /* geo_Ateb */ 
@@ -182,9 +201,12 @@ void geo_utm2geod (struct utmparam *gs, double x, double y,
   double phi;
   double dq;
 
-  x /= gs->AK0; y /= gs->AK0;
+  phi = geo_Ateb(gs, y/GEO_K0);
 
-  phi = geo_Ateb(gs, y);
+  x -= 500000.0;
+  x /= gs->AK0;
+  y /= gs->AK0;
+
   vpot(vp, GEO_NPOT, x/cos(phi));
 
   if (lon) {
@@ -192,7 +214,9 @@ void geo_utm2geod (struct utmparam *gs, double x, double y,
     *lon =
       + dot(vc, gs->F1cos, GEO_NTERM) * vp[1]
       - dot(vc, gs->F3cos, GEO_NTERM) * vp[3]
-      + dot(vc, gs->F5cos, GEO_NTERM) * vp[5];
+      + dot(vc, gs->F5cos, GEO_NTERM) * vp[5]
+      - dot(vc, gs->F7cos, GEO_NTERM) * vp[7]
+	  ;
   }
 
   if (lat) {
@@ -202,7 +226,9 @@ void geo_utm2geod (struct utmparam *gs, double x, double y,
     dq =
       - dot(vs, gs->F2sin, GEO_NTERM) * vp[2]
       + dot(vs, gs->F4sin, GEO_NTERM) * vp[4]
-      - dot(vs, gs->F6sin, GEO_NTERM) * vp[6];
+      - dot(vs, gs->F6sin, GEO_NTERM) * vp[6]
+      + dot(vs, gs->F8sin, GEO_NTERM) * vp[8]
+	  ;
 
     vpot(vp, GEO_NPOT, dq);
     aux[0] = phi;
@@ -212,9 +238,11 @@ void geo_utm2geod (struct utmparam *gs, double x, double y,
     aux[4] = dot(gs->dQ2Lat4sin, vs, GEO_NTERM);
     aux[5] = dot(gs->dQ2Lat5cos, vc, GEO_NTERM);
     aux[6] = dot(gs->dQ2Lat6sin, vs, GEO_NTERM);
+    aux[7] = dot(gs->dQ2Lat7cos, vc, GEO_NTERM);
+    aux[8] = dot(gs->dQ2Lat8sin, vs, GEO_NTERM);
 
     *lat = dot(aux, vp, GEO_NPOT);
   }
 } /* geo_utm2geod */
 
-/* $Id: utmcalc.c,v 2.1 2002/09/06 00:12:11 luis Exp $ */
+/* $Id: utmcalc.c,v 2.2 2002/09/17 19:58:27 luis Exp $ */
