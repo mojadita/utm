@@ -1,7 +1,11 @@
-/* $Id: genutm.c,v 1.2 1998/05/11 18:45:00 luis Exp $
+/* $Id: genutm.c,v 2.0 1998/05/12 18:53:09 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Sun May 10 15:25:27 MET DST 1998
  * $Log: genutm.c,v $
+ * Revision 2.0  1998/05/12 18:53:09  luis
+ * Versión directa completa con cálculo de coordenadas UTM a partir
+ * de geodésicas.
+ *
  * Revision 1.2  1998/05/11 18:45:00  luis
  * Cálculo directo completo.
  *
@@ -205,11 +209,24 @@ double A6 (double x)
   return res;
 }
 
+double geod2utmX (double lat, double lon)
+{
+  double res = K0*A*(A1(lat)*lon - A3(lat)*pow(lon, 3.0) + A5(lat)*pow(lon, 5.0));
+  return res + 500000;
+}
+
+double geod2utmY (double lat, double lon)
+{
+  double res = K0*A*(A0(lat) - A2(lat)*pow(lon, 2.0) + A4(lat)*pow(lon, 4.0) - A6(lat)*pow(lon, 6.0));
+  if (res < 0.0) res += 10000000.0;
+  return res;
+}
+
 /* main program */
 int main (int argc, char **argv)
 {
 	char linea [1000];
-	double l, err;
+	double l, L, err;
 	int i;
 
   printf ("Determinación de beta como serie de funciones... Primero determinamos\n");
@@ -265,9 +282,13 @@ int main (int argc, char **argv)
   for (;;) {
 	printf ("##> ");
   	if (!gets(linea)) break;
-	sscanf (linea, "%lg", &l);
-	l *= PI/180.0;
+	l = L = 0.0;
+	sscanf (linea, "%lf%lf", &l, &L);
+	printf ("Lat(deg)        %-20.17lg\n", l);
+	printf ("Lon(deg)        %-20.17lg\n", L);
+	l *= PI/180.0; L *= PI/180.0;
 	printf ("Lat:            %-20.17lg\n", l);
+	printf ("Lon:            %-20.17lg\n", L);
 	printf ("M:              %-20.17lg\n", A*m(l));
 	printf ("N:              %-20.17lg\n", A*n(l));
 #define KK 4.84813681108e-2
@@ -275,11 +296,13 @@ int main (int argc, char **argv)
 	printf (" A0(Beta): (I)   %20.3lf\n", K0*A*A0(l));
 	printf (" A2:       (II)  %20.3lf\n", -pow(KK,2.0)*K0*A*A2(l));
 	printf (" A4:       (III) %20.3lf\n", pow(KK,4.0)*K0*A*A4(l));
-	printf (" A6:       (A6)  %20.3lf\n", -pow(KK,4.0)*K0*A*A6(l));
+	printf (" A6:       (A6)  %20.3lf\n", -pow(KK,6.0)*K0*A*A6(l));
 	printf (" A1(IV):   (IV)  %20.3lf\n", pow(KK,1.0)*K0*A*A1(l));
 	printf (" A3:       (V)   %20.3lf\n", -pow(KK,3.0)*K0*A*A3(l));
-	printf (" A5:       (B5)  %20.3lf\n", pow(KK,4.0)*K0*A*A5(l));
+	printf (" A5:       (B5)  %20.3lf\n", pow(KK,5.0)*K0*A*A5(l));
+	printf ("\n");
+	printf ("X: %20.3lf\nY: %20.3lf\n", geod2utmX(l, L), geod2utmY(l, L));
   }
 }
 
-/* $Id: genutm.c,v 1.2 1998/05/11 18:45:00 luis Exp $ */
+/* $Id: genutm.c,v 2.0 1998/05/12 18:53:09 luis Exp $ */
