@@ -1,7 +1,10 @@
-/* $Id: utm.h,v 2.4 2002/09/23 06:14:17 luis Exp $
+/* $Id: utm.h,v 2.5 2002/10/17 09:32:59 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Thu Aug 29 21:21:22 MEST 2002
  * $Log: utm.h,v $
+ * Revision 2.5  2002/10/17 09:32:59  luis
+ * Borrado por error genutm.c
+ *
  * Revision 2.4  2002/09/23 06:14:17  luis
  * Modified to support variable number of GEO_NPOT and GEO_NTERM.
  *
@@ -20,6 +23,10 @@
 
 #ifndef _UTM_H
 #define _UTM_H
+
+#ifndef M_PI
+#define M_PI 3.141592653589793238462643383
+#endif
 
 /* Number of terms used in fourier series */
 #ifndef GEO_NTERM
@@ -79,4 +86,4 @@ void geo_utm2geod (struct utmparam *gs, double x, double y,
 	double *lat, double *lon);
 
 #endif /* _UTM_H */
-/* $Id: utm.h,v 2.4 2002/09/23 06:14:17 luis Exp $ */
+/* $Id: utm.h,v 2.5 2002/10/17 09:32:59 luis Exp $ */

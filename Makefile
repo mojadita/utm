@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.8 2002/10/08 19:00:18 luis Exp $
+# $Id: Makefile,v 1.9 2002/10/17 09:32:58 luis Exp $
 # Author: Luis Colorado <luis.colorado@slug.ctv.es>
 # Date: Mon Aug 24 16:53:10 MET DST 1998
 
@@ -6,6 +6,7 @@ OPTIONS=-DGEO_NTERM=15 -DGEO_NPOT=15 -DNiter=4096
 CFLAGS=-O2 -g
 LIBS=-lm
 M4=m4
+CC=gcc
 
 .SUFFIXES: .m4 .c .o .hp48
 
@@ -57,7 +58,7 @@ clean:
 	rm -f *.o genutm utm.hp48
 
 $(modulos_m4): genutm  Makefile
-	genutm -g $* >$*.m4
+	genutm $* >$*.m4
 
 $(modulos_c): utm.c.m4 Makefile
 
