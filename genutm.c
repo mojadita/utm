@@ -1,7 +1,11 @@
-/* $Id: genutm.c,v 2.4 1998/08/05 19:10:18 luis Exp $
+/* $Id: genutm.c,v 2.5 1998/08/06 12:07:25 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Sun May 10 15:25:27 MET DST 1998
  * $Log: genutm.c,v $
+ * Revision 2.5  1998/08/06 12:07:25  luis
+ * Found error in calculus of dQ2Lat to find the increment of latitude
+ * from the increment in isometric latitude.
+ *
  * Revision 2.4  1998/08/05 19:10:18  luis
  * Complete utm transformation (direct and inverse), but there must be an
  * error as there are some errors when going far from the central meridian,
@@ -571,7 +575,7 @@ double B6 (double x)
 
 /************ INCREMENTO DE Q -> INCREMENTO DE LATITUD **************/
 double predQ2Lat1 (double phi)
-{ return n(phi)*cos(phi);
+{ return n(phi)/m(phi)*cos(phi);
 }
 
 double dQ2Lat1cos[NTERM];
@@ -593,7 +597,7 @@ double derdQ2Lat1 (double phi)
 }
 
 double predQ2Lat2 (double phi)
-{ return n(phi) * cos(phi) * derdQ2Lat1(phi) / 2.0;
+{ return n(phi)/m(phi) * cos(phi) * derdQ2Lat1(phi) / 2.0;
 }
 
 double dQ2Lat2sin[NTERM];
@@ -615,7 +619,7 @@ double derdQ2Lat2 (double phi)
 }
 
 double predQ2Lat3 (double phi)
-{ return n(phi) * cos(phi) * derdQ2Lat2(phi) / 3.0;
+{ return n(phi)/m(phi) * cos(phi) * derdQ2Lat2(phi) / 3.0;
 }
 
 double dQ2Lat3cos[NTERM];
@@ -637,7 +641,7 @@ double derdQ2Lat3 (double phi)
 }
 
 double predQ2Lat4 (double phi)
-{ return n(phi) * cos(phi) * derdQ2Lat3(phi) / 4.0;
+{ return n(phi)/m(phi) * cos(phi) * derdQ2Lat3(phi) / 4.0;
 }
 
 double dQ2Lat4sin[NTERM];
@@ -659,7 +663,7 @@ double derdQ2Lat4 (double phi)
 }
 
 double predQ2Lat5 (double phi)
-{ return n(phi) * cos(phi) * derdQ2Lat4(phi) / 5.0;
+{ return n(phi)/m(phi) * cos(phi) * derdQ2Lat4(phi) / 5.0;
 }
 
 double dQ2Lat5cos[NTERM];
@@ -681,7 +685,7 @@ double derdQ2Lat5 (double phi)
 }
 
 double predQ2Lat6 (double phi)
-{ return n(phi) * cos(phi) * derdQ2Lat5(phi) / 6.0;
+{ return n(phi)/m(phi) * cos(phi) * derdQ2Lat5(phi) / 6.0;
 }
 
 double dQ2Lat6sin[NTERM];
@@ -703,7 +707,7 @@ double derdQ2Lat6 (double phi)
 }
 
 double predQ2Lat7 (double phi)
-{ return n(phi) * cos(phi) * derdQ2Lat6(phi) / 7.0;
+{ return n(phi)/m(phi) * cos(phi) * derdQ2Lat6(phi) / 7.0;
 }
 
 double geod2utmX (double lat, double lon)
@@ -749,11 +753,20 @@ double hms2h (double x)
   return deg + min / 60.0 + x / 3600.0;
 }
 
-int huso (double l, double L, char *zona)
+double h2hms (double x)
+{
+  double deg, min;
+  x = modf (x, &deg)*60.0;
+  x = modf (x, &min)*60.0;
+  return deg + min / 100.0 + x / 10000.0;
+}
+
+int huso (double l, double *L, char *zona)
 {
   static char *t1 = "CDEFGHJKLMNPQRSTUVWXYZ";
-  int h = (int)((L + 180.0) / 6.0) + 1;
-  sprintf (zona, "%2d%c", h, t1 [(int)((l + 80.0) / 8.0)]);
+  int h = (int)((*L + M_PI) / M_PI * 30.0) + 1;
+  *L = fmod(*L + M_PI/2.0, M_PI/30.0) - M_PI/60.0;
+  sprintf (zona, "%2d%c", h, t1 [(int)((l + M_PI/2.25) / M_PI * 22.5)]);
   return h;
 }
 
@@ -964,20 +977,21 @@ int main (int argc, char **argv)
   	if (!gets(linea)) break;
 	l = L = 0.0;
 	sscanf (linea, "%lf%lf", &l, &L);
-	l = hms2h(l); L = hms2h(L);
-	h = huso (l, L, z);
-	L = fmod (L + 180.0, 6.0) - 3.0;
 
-	printf ("Huso:           %d\n", h);
-	printf ("Zona:           %s\n", z);
+	printf ("Lat(h.mmssss):  %0.17lg\n", l);
+	printf ("Lon(h.mmssss):  %0.17lg\n", L);
+	l = hms2h(l); L = hms2h(L);
 	printf ("Lat(deg)        %0.17lg\n", l);
 	printf ("Lon(deg)        %0.17lg\n", L);
 	l *= M_PI/180.0; L *= M_PI/180.0;
-	printf ("Lat:            %0.17lg\n", l);
-	printf ("Lon:            %0.17lg\n", L);
+	printf ("Lat(rad):       %0.17lg\n", l);
+	printf ("Lon(rad):       %0.17lg\n", L);
+	h = huso (l, &L, z);
+	printf ("Lon(huso):      %0.17lg\n", L);
 	printf ("M:              %0.17lg\n", A*m(l));
 	printf ("N:              %0.17lg\n", A*n(l));
-	printf ("X: %20.3lf\nY: %20.3lf\n",
+	printf ("X(m):           %0.3lf\n"
+	        "Y(m):           %0.3lf\n",
 	  x = geod2utmX(l, L), y = geod2utmY(l, L));
 	printf ("zona:            %s%s\n", z, zona(h, x, y));
 	printf ("Ateb(y):        %0.17lg\n", Ateb(y/K0/A));
@@ -992,22 +1006,28 @@ int main (int argc, char **argv)
   	if (!gets(linea)) break;
 	sscanf (linea, "%lf%lf%i", &x, &y, &h);
 	utm2geod((x - 500000.0)/K0/A, y/K0/A, &l, &L);
-	huso (l, L, z);
+	L += ((h-30) * M_PI/30.0) - M_PI/60.0;
 
-	printf ("Huso:           %d\n", h);
-	printf ("Zona:           %s\n", zona(h, x, y));
+	printf ("Huso(antes):    %d\n", h);
+	printf ("Zona(antes):    %s\n", zona(h, x, y));
+	printf ("Lat(rad):       %0.17lg\n", l);
+	printf ("Lon(rad):       %0.17lg\n", L);
 	printf ("Lat(deg)        %0.17lg\n", l * 180.0/M_PI);
 	printf ("Lon(deg)        %0.17lg\n", L * 180.0/M_PI);
-	printf ("Lat:            %0.17lg\n", l);
-	printf ("Lon:            %0.17lg\n", L + (h - 30.5) * M_PI / 30.0);
+	printf ("Lat(h.mmssss)   %0.17lg\n", h2hms(l * 180.0/M_PI));
+	printf ("Lon(h.mmssss)   %0.17lg\n", h2hms(L * 180.0/M_PI));
+	h = huso (l, &L, z);
+	printf ("Huso(despues):  %d\n", h);
+	printf ("Zona(despues):  %s%s\n", z, zona(h, x, y));
+	printf ("Lon(huso/deg):  %0.17lg\n", h2hms(L * 180.0/M_PI));
 	printf ("M:              %0.17lg\n", A*m(l));
 	printf ("N:              %0.17lg\n", A*n(l));
-	printf ("X: %20.3lf\nY: %20.3lf\n",
+	printf ("X:              %0.3lf\n"
+	        "Y:              %0.3lf\n",
 	  x = geod2utmX(l, L), y = geod2utmY(l, L));
-	printf ("zona:            %s%s\n", z, zona(h, x, y));
 	printf ("Ateb(y):        %0.17lg\n", Ateb(y/K0/A));
 
   }
 }
 
-/* $Id: genutm.c,v 2.4 1998/08/05 19:10:18 luis Exp $ */
+/* $Id: genutm.c,v 2.5 1998/08/06 12:07:25 luis Exp $ */
