@@ -1,1 +1,5 @@
-[A-Z][A-Z].{c,m4}
+[A-Z][A-Z].c
+[A-Z][A-Z].m4
+utm
+pru
+genutm
