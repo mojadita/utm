@@ -12,10 +12,13 @@ for(`I',0,NTERM-1,`    id(`$1',I),   /* #I */
 ')
 ifndef(`PREFIX',define(PREFIX,`'))
 divert(0)dnl
-/* $Id: utm.c.m4,v 2.1 1998/08/17 18:54:55 luis Exp $
+/* $Id: utm.c.m4,v 2.2 1998/08/17 18:58:12 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Mon Aug 10 15:54:07 MET DST 1998
  * $Log: utm.c.m4,v $
+ * Revision 2.2  1998/08/17 18:58:12  luis
+ * Inclusion of Automatically generated message into the source code.
+ *
  * Revision 2.1  1998/08/17 18:54:55  luis
  * *** empty log message ***
  *
@@ -26,6 +29,9 @@ divert(0)dnl
  * Revision 1.1  1998/08/17 13:43:24  luis
  * Initial revision
  *
+ * CAUTION: THIS FILE HAS BEEN GENERATED AUTOMATICALLY FROM CONSTANTS
+ * CALCULUS AND M4 lq`'TEMPLATE`'rq FILE.
+ * EDIT ONLY IF YOU ARE UNABLE TO GENERATE IT AUTOMATICALLY.
  */
 
 #`define' IN_UTM_C
@@ -250,4 +256,4 @@ void PREFIX`'utm2geod (double x, double y, double *lat, double *lon)
   }
 }
 
-/* $Id: utm.c.m4,v 2.1 1998/08/17 18:54:55 luis Exp $ */
+/* $Id: utm.c.m4,v 2.2 1998/08/17 18:58:12 luis Exp $ */
