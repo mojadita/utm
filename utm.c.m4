@@ -12,12 +12,15 @@ for(`I',0,NTERM-1,`    id(`$1',I),   /* #I */
 ')
 ifndef(`PREFIX',define(PREFIX,`'))
 divert(0)dnl
-/* $Id: utm.c.m4,v 2.0 1998/08/17 18:50:13 luis Exp $
+/* $Id: utm.c.m4,v 2.1 1998/08/17 18:54:55 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Mon Aug 10 15:54:07 MET DST 1998
  * $Log: utm.c.m4,v $
+ * Revision 2.1  1998/08/17 18:54:55  luis
+ * *** empty log message ***
+ *
  * Revision 2.0  1998/08/17 18:50:13  luis
- * Inclusion of Linear Deformation Modulus `K' and meridian convergence for
+ * Inclusion of Linear Deformation Modulus lq`'K`'rq and meridian convergence `for'
  * ease of distance and azimuth calculus.
  *
  * Revision 1.1  1998/08/17 13:43:24  luis
@@ -247,5 +250,4 @@ void PREFIX`'utm2geod (double x, double y, double *lat, double *lon)
   }
 }
 
-
-/* $Id: utm.c.m4,v 2.0 1998/08/17 18:50:13 luis Exp $ */
+/* $Id: utm.c.m4,v 2.1 1998/08/17 18:54:55 luis Exp $ */
