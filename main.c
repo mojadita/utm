@@ -1,4 +1,4 @@
-/* $Id: main.c,v 1.3 2002/09/23 06:14:17 luis Exp $
+/* $Id: main.c,v 1.4 2002/09/24 09:14:28 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Mon Aug 10 20:15:25 MET DST 1998
  */
@@ -182,6 +182,7 @@ int main (int argc, char **argv)
 		geo_K_conv(sg, l, L, &k, &d);
 		printf ("K            :  %0.17lg\n", k);
 		printf ("Converg.     :  %0.17lg\n", 180.0/M_PI*d);
+		printf ("Conv(R.)     :  %0.17lg\n", geo_N(sg, l)/tan(l));
 
 		geo_geod2utm(sg, l, L, &x, &y);
 		if (y < 0.0) y += 1.0e7;
@@ -220,6 +221,7 @@ int main (int argc, char **argv)
 		geo_K_conv(sg, l, L, &k, &d);
 		printf ("K            :  %0.17lg\n", k);
 		printf ("Converg.     :  %0.17lg\n", 180.0/M_PI*d);
+		printf ("Conv(R.)     :  %0.17lg\n", geo_N(sg, l)/tan(l));
 
 		geo_geod2utm(sg, l, L, &x, &y);
 		if (y < 0.0) y += 1.0e7;
@@ -235,4 +237,4 @@ int main (int argc, char **argv)
 
 } /* main */
 
-/* $Id: main.c,v 1.3 2002/09/23 06:14:17 luis Exp $ */
+/* $Id: main.c,v 1.4 2002/09/24 09:14:28 luis Exp $ */
