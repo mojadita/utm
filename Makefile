@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.7 2002/09/23 06:14:17 luis Exp $
+# $Id: Makefile,v 1.8 2002/10/08 19:00:18 luis Exp $
 # Author: Luis Colorado <luis.colorado@slug.ctv.es>
 # Date: Mon Aug 24 16:53:10 MET DST 1998
 
@@ -9,7 +9,7 @@ M4=m4
 
 .SUFFIXES: .m4 .c .o .hp48
 
-progs = genutm utm pru
+progs = genutm utm pru media
 
 modulos = AA AM AN BN BR CC CD EA EB EC ED EE EF FA HE HO ID IN KA RF SA WD WE
 
@@ -37,6 +37,10 @@ utm_objs = $(modulos_o) utmcalc.o main.o
 utm: $(utm_objs) Makefile
 	$(CC) $(CFLAGS) $(LDFLAGS) $(utm_objs) $(LIBS) -o utm
 $(utm_objs): utm.h Makefile
+
+media_objs = $(modulos_o) media.o utmcalc.o
+media: $(media_objs) Makefile
+	$(CC) $(CFLAGS) $(LDFLAGS) $(media_objs) $(LIBS) -o media
 
 genutm_objs = genutm.o utmcalc.o
 genutm: $(genutm_objs) Makefile

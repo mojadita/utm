@@ -1,4 +1,4 @@
-/* $Id: main.c,v 1.4 2002/09/24 09:14:28 luis Exp $
+/* $Id: main.c,v 1.5 2002/10/08 19:00:18 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Mon Aug 10 20:15:25 MET DST 1998
  */
@@ -152,6 +152,8 @@ int main (int argc, char **argv)
   while (opt = menu(
 		"GEODESICAS -> UTM",
   		"UTM -> GEODESICAS",
+		"GEODESICAS -> UTM (dentro del huso)",
+  		"UTM -> GEODESICAS (dentro del huso)",
 		NULL))
   {
   	switch(opt) {
@@ -232,9 +234,75 @@ int main (int argc, char **argv)
 
 		break;
 	}
+	case 3: { /* geodesicas -> utm  (dentro del huso) */
+		char z [10];
+		int h;
+		double x, y;
+	
+		printf ("Geodésicas->UTM (%s)\n"
+			"##(hh.mmssss hh.mmssss)> ", sg->dsc);
+	  	if (!fgets(linea, sizeof linea, stdin)) break;
+
+		l = L = 0.0;
+		sscanf (linea, "%lf%lf", &l, &L);
+	
+		printf ("Lat(h.mmssss):  %0.17lg\n", l);
+		printf ("Lon(h.mmssss):  %0.17lg\n", L);
+		l = hms2h(l); L = hms2h(L);
+		printf ("Lat(deg)     :  %0.17lg\n", l);
+		printf ("Lon(deg)     :  %0.17lg\n", L);
+		l *= M_PI/180.0; L *= M_PI/180.0;
+		printf ("Beta         :  %0.17lg\n", geo_Beta(sg, l));
+		printf ("M            :  %0.17lg\n", geo_M(sg, l));
+		printf ("N            :  %0.17lg\n", geo_N(sg, l));
+
+		geo_K_conv(sg, l, L, &k, &d);
+		printf ("K            :  %0.17lg\n", k);
+		printf ("Converg.     :  %0.17lg\n", 180.0/M_PI*d);
+		printf ("Conv(R.)     :  %0.17lg\n", geo_N(sg, l)/tan(l));
+
+		geo_geod2utm(sg, l, L, &x, &y);
+		if (y < 0.0) y += 1.0e7;
+		printf ("X(m)         :  %0.17lg\n"
+		        "Y(m)         :  %0.17lg\n", x, y);
+		break;
+	}
+	case 4: { /* utm->geodesicas (dentro del huso) */
+		char z [10];
+		int h;
+		double x, y, lat, lon;
+
+		printf ("UTM->Geodésicas (%s)\n"
+			"##(x.xxx y.yyy)> ", sg->dsc);
+	  	if (!fgets(linea, sizeof linea, stdin))
+			break;
+		sscanf (linea, "%lf%lf", &x, &y);
+
+		geo_utm2geod(sg, x, y, &l, &L);
+	
+		printf ("Lat(h.mmssss):  %0.17lg\n", h2hms(l * 180.0/M_PI));
+		printf ("Lon(h.mmssss):  %0.17lg\n", h2hms(L * 180.0/M_PI));
+		printf ("Lat(deg)     :  %0.17lg\n", l * 180.0/M_PI);
+		printf ("Lon(deg)     :  %0.17lg\n", L * 180.0/M_PI);
+
+		printf ("Beta         :  %0.17lg\n", geo_Beta(sg, l));
+		printf ("M            :  %0.17lg\n", geo_M(sg, l));
+		printf ("N            :  %0.17lg\n", geo_N(sg, l));
+
+		geo_K_conv(sg, l, L, &k, &d);
+		printf ("K            :  %0.17lg\n", k);
+		printf ("Converg.     :  %0.17lg\n", 180.0/M_PI*d);
+		printf ("Conv(R.)     :  %0.17lg\n", geo_N(sg, l)/tan(l));
+
+		geo_geod2utm(sg, l, L, &x, &y);
+		if (y < 0.0) y += 1.0e7;
+		printf ("X(m)         :  %0.17lg\n"
+		        "Y(m)         :  %0.17lg\n", x, y);
+		break;
+	}
 	} /* switch */
   } /* while */
 
 } /* main */
 
-/* $Id: main.c,v 1.4 2002/09/24 09:14:28 luis Exp $ */
+/* $Id: main.c,v 1.5 2002/10/08 19:00:18 luis Exp $ */
