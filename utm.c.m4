@@ -12,10 +12,13 @@ for(`I',0,NTERM-1,`    id(`$1',I),   /* #I */
 ')
 ifndef(`PREFIX',define(PREFIX,`'))
 divert(0)dnl
-/* $Id: utm.c.m4,v 2.2 1998/08/17 18:58:12 luis Exp $
+/* $Id: utm.c.m4,v 2.3 1998/08/17 19:02:20 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Mon Aug 10 15:54:07 MET DST 1998
  * $Log: utm.c.m4,v $
+ * Revision 2.3  1998/08/17 19:02:20  luis
+ * Elimination of spanish comments in the code.
+ *
  * Revision 2.2  1998/08/17 18:58:12  luis
  * Inclusion of Automatically generated message into the source code.
  *
@@ -145,7 +148,7 @@ void PREFIX`'geod2utm (double lat, double lon, double *x, double *y)
   }
 }
 
-/************** K ***********************/
+/************** K MODULUS/CONVERGENCE CALCULUS ******************/
 
 void PREFIX`'K_conv (double lat, double lon, double *kres, double *conv)
 { double vs[`NTERM'], vc[`NTERM'], vp[NPOT];
@@ -168,7 +171,7 @@ void PREFIX`'K_conv (double lat, double lon, double *kres, double *conv)
     *conv = atan2(resx, resy);
 }
 
-/************** TRANSFORMACIÓN UTM -> GEODÉSICAS ****************/
+/************** GEODETIC -> UTM CALCULATION ****************/
 
 /* FUNCIÓN ATEB, INVERSA DE LA FUNCIÓN BETA */
 defineTable(`Ateb1cos')
@@ -204,7 +207,7 @@ double PREFIX`'Ateb(double y)
 }
 
 
-/********** INVERSE TRANSFORMATION *********/
+/********** INVERSE CALCULUS *********/
 
 defineTable(`F1cos')
 defineTable(`F2sin')
@@ -256,4 +259,4 @@ void PREFIX`'utm2geod (double x, double y, double *lat, double *lon)
   }
 }
 
-/* $Id: utm.c.m4,v 2.2 1998/08/17 18:58:12 luis Exp $ */
+/* $Id: utm.c.m4,v 2.3 1998/08/17 19:02:20 luis Exp $ */
