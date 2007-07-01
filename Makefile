@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.9 2002/10/17 09:32:58 luis Exp $
+# $Id: Makefile,v 1.10 2007/07/01 22:31:20 luis Exp $
 # Author: Luis Colorado <luis.colorado@slug.ctv.es>
 # Date: Mon Aug 24 16:53:10 MET DST 1998
 
@@ -10,9 +10,9 @@ CC=gcc
 
 .SUFFIXES: .m4 .c .o .hp48
 
-progs = genutm utm pru media
+progs = genutm utm pru #media
 
-modulos = AA AM AN BN BR CC CD EA EB EC ED EE EF FA HE HO ID IN KA RF SA WD WE
+modulos = AA AM AN BN BR CC CD EA EB EC ED EE EF FA HE HO ID IN KA RF SA ST WD WE
 
 modulos_c = $(modulos:=.c)
 modulos_o = $(modulos:=.o)
@@ -58,7 +58,7 @@ clean:
 	rm -f *.o genutm utm.hp48
 
 $(modulos_m4): genutm  Makefile
-	genutm $* >$*.m4
+	genutm -g $* >$*.m4
 
 $(modulos_c): utm.c.m4 Makefile
 

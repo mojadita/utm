@@ -1,4 +1,4 @@
-/* $Id: main.c,v 1.5 2002/10/08 19:00:18 luis Exp $
+/* $Id: main.c,v 1.6 2007/07/01 22:31:20 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Mon Aug 10 20:15:25 MET DST 1998
  */
@@ -58,6 +58,7 @@ struct utmparam *tabla[] = {
 struct utmparam *lookup(char *name)
 {
 	struct utmparam **p;
+
 	for (p = tabla; *p; p++)
 		if (!strcmp((*p)->name,name))
 			break;
@@ -69,20 +70,32 @@ double hms2h (double x)
 {
   double deg, min;
 
-  x = modf (x, &deg)*100.0;
-  x = modf (x, &min)*100.0;
+  printf("hms2h: x = %lg\n", x);
+  x = modf(x, &deg)*100.0;
+  if (x > 80.0) x *= 0.60;
+  printf("hms2h: x = %lg, deg = %lg\n", x, deg);
+  x = modf(x, &min)*100.0;
+  if (x > 80.0) x *= 0.60;
+  printf("hms2h: x = %lg, min = %lg\n", x, min);
 
-  return deg + min / 60.0 + x / 3600.0;
+  x = deg + min/60.0 + x/3600.0;
+  printf("hms2h: --> x = %lg\n", x);
+  return x;
 } /* hms2h */
 
 double h2hms (double x)
 {
   double deg, min;
 
-  x = modf (x, &deg)*60.0;
-  x = modf (x, &min)*60.0;
+  printf("h2hms: x = %lg\n", x);
+  x = modf(x, &deg)*60.0;
+  printf("h2hms: x = %lg, deg = %lg\n", x, deg);
+  x = modf(x, &min)*60.0;
+  printf("h2hms: x = %lg, min = %lg\n", x, min);
 
-  return deg + min / 100.0 + x / 10000.0;
+  x = deg + min/100.0 + x/10000.0;
+  printf("h2hms: --> x = %lg\n", x);
+  return x;
 } /* h2hms */
 
 int huso (double l, double *L, char *zona)
@@ -305,4 +318,4 @@ int main (int argc, char **argv)
 
 } /* main */
 
-/* $Id: main.c,v 1.5 2002/10/08 19:00:18 luis Exp $ */
+/* $Id: main.c,v 1.6 2007/07/01 22:31:20 luis Exp $ */
