@@ -1,8 +1,12 @@
-/* $Id: utm_ini.h,v 2.3 2007/07/01 22:31:20 luis Exp $
+/* $Id: utm_ini.h,v 2.4 2007/07/01 23:50:48 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Fri Sep  6 02:07:35 MEST 2002
  * $Log: utm_ini.h,v $
- * Revision 2.3  2007/07/01 22:31:20  luis
+ * Revision 2.4  2007/07/01 23:50:48  luis
+ * * Eliminadas las trazas que se habían colocado en las funciones hms2h() y
+ *   h2hms().  Ahora dependen de la definición de DEBUG.
+ *
+ * Revision 2.3  2007-07-01 22:31:20  luis
  * * Corregido un error debido al redondeo en hms2h() que hacía que se calculara
  *   mal las transformaciones de geodésicas a utm.
  *
@@ -41,7 +45,7 @@ struct utmparam wgs84table[] = {
 	{ "KA", "Krassovsky, 1.940", 0.006693421622, 6378245.0,  /* ... */ },
 	{ "RF", "Geodetic Reference System 1980", 0.006694380023, 6378137,  /* ... */ },
 	{ "SA", "South American, 1.969", 0.006694541854, 6378160.0,  /* ... */ },
-	{ "ST", "Struve, Espa�Anterior a 1970", 0.00677436, 6378298.3, /* ... */ },
+	{ "ST", "Struve, Espa�a, anterior a 1970", 0.00677436, 6378298.3, /* ... */ },
 	{ "WD", "World Geodetic, 1.972", 0.006694317778, 6378135.0,  /* ... */ },
 	{ NULL /* ... */ },
 }; /* wgs84table [] */
@@ -177,4 +181,4 @@ struct geosys geo_sys[] {
 }; /* geo_sys */
 #endif
 
-/* $Id: utm_ini.h,v 2.3 2007/07/01 22:31:20 luis Exp $ */
+/* $Id: utm_ini.h,v 2.4 2007/07/01 23:50:48 luis Exp $ */

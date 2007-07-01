@@ -1,4 +1,4 @@
-/* $Id: main.c,v 1.6 2007/07/01 22:31:20 luis Exp $
+/* $Id: main.c,v 1.7 2007/07/01 23:50:48 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Mon Aug 10 20:15:25 MET DST 1998
  */
@@ -13,6 +13,10 @@
 #include <stdarg.h>
 #include <math.h>
 #include "utm.h"
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
 
 /* functions */
 
@@ -46,13 +50,14 @@ extern struct utmparam
 	geo_IN, geo_WE, geo_WD, geo_SA, geo_FA, geo_AM,
 	geo_KA, geo_HO, geo_ID, geo_AA, geo_AN, geo_BR,
 	geo_BN, geo_CC, geo_CD, geo_EA, geo_EB, geo_EC,
-	geo_ED, geo_EE, geo_EF, geo_RF, geo_HE; 
+	geo_ED, geo_EE, geo_EF, geo_RF, geo_HE, geo_ST; 
 
 struct utmparam *tabla[] = {
 	&geo_IN, &geo_WE, &geo_WD, &geo_SA, &geo_FA, &geo_AM,
 	&geo_KA, &geo_HO, &geo_ID, &geo_AA, &geo_AN, &geo_BR,
 	&geo_BN, &geo_CC, &geo_CD, &geo_EA, &geo_EB, &geo_EC,
-	&geo_ED, &geo_EE, &geo_EF, &geo_RF, &geo_HE, NULL
+	&geo_ED, &geo_EE, &geo_EF, &geo_RF, &geo_HE, &geo_ST,
+	NULL
 };
 
 struct utmparam *lookup(char *name)
@@ -70,16 +75,24 @@ double hms2h (double x)
 {
   double deg, min;
 
+#if DEBUG
   printf("hms2h: x = %lg\n", x);
+#endif
   x = modf(x, &deg)*100.0;
   if (x > 80.0) x *= 0.60;
+#if DEBUG
   printf("hms2h: x = %lg, deg = %lg\n", x, deg);
+#endif
   x = modf(x, &min)*100.0;
   if (x > 80.0) x *= 0.60;
+#if DEBUG
   printf("hms2h: x = %lg, min = %lg\n", x, min);
+#endif
 
   x = deg + min/60.0 + x/3600.0;
+#if DEBUG
   printf("hms2h: --> x = %lg\n", x);
+#endif
   return x;
 } /* hms2h */
 
@@ -87,14 +100,22 @@ double h2hms (double x)
 {
   double deg, min;
 
+#if DEBUG
   printf("h2hms: x = %lg\n", x);
+#endif
   x = modf(x, &deg)*60.0;
+#if DEBUG
   printf("h2hms: x = %lg, deg = %lg\n", x, deg);
+#endif
   x = modf(x, &min)*60.0;
+#if DEBUG
   printf("h2hms: x = %lg, min = %lg\n", x, min);
+#endif
 
   x = deg + min/100.0 + x/10000.0;
+#if DEBUG
   printf("h2hms: --> x = %lg\n", x);
+#endif
   return x;
 } /* h2hms */
 
@@ -318,4 +339,4 @@ int main (int argc, char **argv)
 
 } /* main */
 
-/* $Id: main.c,v 1.6 2007/07/01 22:31:20 luis Exp $ */
+/* $Id: main.c,v 1.7 2007/07/01 23:50:48 luis Exp $ */
