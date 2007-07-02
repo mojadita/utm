@@ -1,5 +1,7 @@
-/* $Id: main.c,v 1.7 2007/07/01 23:50:48 luis Exp $
+/* $Id: main.c,v 1.8 2007/07/02 21:23:45 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
+ * 		Luis Colorado <lc@luiscoloradosistemas.com>
+ * 		Luis Colorado <luis.colorado@HispaLinux.ES>
  * Date: Mon Aug 10 20:15:25 MET DST 1998
  */
 
@@ -339,4 +341,4 @@ int main (int argc, char **argv)
 
 } /* main */
 
-/* $Id: main.c,v 1.7 2007/07/01 23:50:48 luis Exp $ */
+/* $Id: main.c,v 1.8 2007/07/02 21:23:45 luis Exp $ */
