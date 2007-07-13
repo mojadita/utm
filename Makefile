@@ -1,8 +1,12 @@
-# $Id: Makefile,v 1.11 2007/07/13 19:57:54 luis Exp $
+# $Id: Makefile,v 1.12 2007/07/13 20:58:27 luis Exp $
 # Author: Luis Colorado <luis.colorado@slug.ctv.es>
 # Date: Mon Aug 24 16:53:10 MET DST 1998
 
+<<<<<<< Makefile
+OPTIONS=-DGEO_NTERM=16 -DGEO_NPOT=15 -DNiter=4096
+=======
 OPTIONS=-DGEO_NTERM=10 -DGEO_NPOT=8 -DNiter=1024
+>>>>>>> 1.11
 CFLAGS=-O2 -g
 LIBS=-lm
 M4=m4
@@ -43,10 +47,11 @@ media_objs = $(modulos_o) media.o utmcalc.o
 media: $(media_objs) Makefile
 	$(CC) $(CFLAGS) $(LDFLAGS) $(media_objs) $(LIBS) -o media
 
-genutm_objs = genutm.o utmcalc.o
+genutm_objs = genutm.o utmcalc.o fft.o
 genutm: $(genutm_objs) Makefile
 	$(CC) $(LDFLAGS) $(genutm_objs) $(LIBS) -o genutm
 genutm.o: utm.h utm_ini.h
+fft.o: fft.h mkroots.h
 
 pru_objs = pru.o
 pru: $(pru_objs) Makefile
