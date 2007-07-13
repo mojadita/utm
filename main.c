@@ -1,4 +1,4 @@
-/* $Id: main.c,v 1.8 2007/07/02 21:23:45 luis Exp $
+/* $Id: main.c,v 1.9 2007/07/13 19:57:54 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * 		Luis Colorado <lc@luiscoloradosistemas.com>
  * 		Luis Colorado <luis.colorado@HispaLinux.ES>
@@ -15,6 +15,10 @@
 #include <stdarg.h>
 #include <math.h>
 #include "utm.h"
+
+#define FMT_DIST	"%17.5lf"
+#define FMT_NUMB	"%17.8lf"
+#define FMT_ANGL	"%17.7lf"
 
 #ifndef DEBUG
 #define DEBUG 0
@@ -75,7 +79,7 @@ struct utmparam *lookup(char *name)
 
 double hms2h (double x)
 {
-  double deg, min;
+  double deg, min, sec;
 
 #if DEBUG
   printf("hms2h: x = %lg\n", x);
@@ -182,8 +186,8 @@ int main (int argc, char **argv)
   printf("PROGRAMA PARA CONVERSIÓN DE DATOS UTM/GEODESICAS\n");
   printf("(C) 2002 Luis.Colorado@hispalinux.es\n");
   printf("Sistema Geodésico: [%s] %s\n", sg->name, sg->dsc);
-  printf ("A:              %0.17lg\n", sg->a);
-  printf ("E2:             %0.17lg\n", sg->e2);
+  printf ("A:              "FMT_DIST"\n", sg->a);
+  printf ("E2:             "FMT_NUMB"\n", sg->e2);
 
   while (opt = menu(
 		"GEODESICAS -> UTM",
@@ -205,27 +209,27 @@ int main (int argc, char **argv)
 		l = L = 0.0;
 		sscanf (linea, "%lf%lf", &l, &L);
 	
-		printf ("Lat(h.mmssss):  %0.17lg\n", l);
-		printf ("Lon(h.mmssss):  %0.17lg\n", L);
+		printf ("Lat(h.mmssss):  "FMT_ANGL"\n", l);
+		printf ("Lon(h.mmssss):  "FMT_ANGL"\n", L);
 		l = hms2h(l); L = hms2h(L);
-		printf ("Lat(deg)     :  %0.17lg\n", l);
-		printf ("Lon(deg)     :  %0.17lg\n", L);
+		printf ("Lat(deg)     :  "FMT_ANGL"\n", l);
+		printf ("Lon(deg)     :  "FMT_ANGL"\n", L);
 		l *= M_PI/180.0; L *= M_PI/180.0;
 		h = huso (l, &L, z);
-		printf ("Lon(huso/deg):  %0.17lg\n", L*180.0/M_PI);
-		printf ("Beta         :  %0.17lg\n", geo_Beta(sg, l));
-		printf ("M            :  %0.17lg\n", geo_M(sg, l));
-		printf ("N            :  %0.17lg\n", geo_N(sg, l));
+		printf ("Lon(huso/deg):  "FMT_ANGL"\n", L*180.0/M_PI);
+		printf ("Beta         :  "FMT_DIST"\n", geo_Beta(sg, l));
+		printf ("M            :  "FMT_DIST"\n", geo_M(sg, l));
+		printf ("N            :  "FMT_DIST"\n", geo_N(sg, l));
 
 		geo_K_conv(sg, l, L, &k, &d);
-		printf ("K            :  %0.17lg\n", k);
-		printf ("Converg.     :  %0.17lg\n", 180.0/M_PI*d);
-		printf ("Conv(R.)     :  %0.17lg\n", geo_N(sg, l)/tan(l));
+		printf ("K            :  "FMT_NUMB"\n", k);
+		printf ("Converg.     :  "FMT_ANGL"\n", 180.0/M_PI*d);
+		printf ("Conv(R.)     :  "FMT_DIST"\n", geo_N(sg, l)/tan(l));
 
 		geo_geod2utm(sg, l, L, &x, &y);
 		if (y < 0.0) y += 1.0e7;
-		printf ("X(m)         :  %0.17lg\n"
-		        "Y(m)         :  %0.17lg\n", x, y);
+		printf ("X(m)         :  "FMT_DIST"\n"
+		        "Y(m)         :  "FMT_DIST"\n", x, y);
 		printf ("MGRS         :  %s%s %05d %05d\n", z, zona(h, x, y),
 			(int)(x) % 100000, (int)(y) % 100000);
 		break;
@@ -244,27 +248,27 @@ int main (int argc, char **argv)
 		geo_utm2geod(sg, x, y, &l, &L);
 		L += ((h-30) * M_PI/30.0) - M_PI/60.0;
 	
-		printf ("Lat(h.mmssss):  %0.17lg\n", h2hms(l * 180.0/M_PI));
-		printf ("Lon(h.mmssss):  %0.17lg\n", h2hms(L * 180.0/M_PI));
-		printf ("Lat(deg)     :  %0.17lg\n", l * 180.0/M_PI);
-		printf ("Lon(deg)     :  %0.17lg\n", L * 180.0/M_PI);
+		printf ("Lat(h.mmssss):  "FMT_ANGL"\n", h2hms(l * 180.0/M_PI));
+		printf ("Lon(h.mmssss):  "FMT_ANGL"\n", h2hms(L * 180.0/M_PI));
+		printf ("Lat(deg)     :  "FMT_ANGL"\n", l * 180.0/M_PI);
+		printf ("Lon(deg)     :  "FMT_ANGL"\n", L * 180.0/M_PI);
 
 		h = huso (l, &L, z);
 		printf ("Huso         :  %d\n", h);
 
-		printf ("Beta         :  %0.17lg\n", geo_Beta(sg, l));
-		printf ("M            :  %0.17lg\n", geo_M(sg, l));
-		printf ("N            :  %0.17lg\n", geo_N(sg, l));
+		printf ("Beta         :  "FMT_DIST"\n", geo_Beta(sg, l));
+		printf ("M            :  "FMT_DIST"\n", geo_M(sg, l));
+		printf ("N            :  "FMT_DIST"\n", geo_N(sg, l));
 
 		geo_K_conv(sg, l, L, &k, &d);
-		printf ("K            :  %0.17lg\n", k);
-		printf ("Converg.     :  %0.17lg\n", 180.0/M_PI*d);
-		printf ("Conv(R.)     :  %0.17lg\n", geo_N(sg, l)/tan(l));
+		printf ("K            :  "FMT_NUMB"\n", k);
+		printf ("Converg.     :  "FMT_ANGL"\n", 180.0/M_PI*d);
+		printf ("Conv(R.)     :  "FMT_DIST"\n", geo_N(sg, l)/tan(l));
 
 		geo_geod2utm(sg, l, L, &x, &y);
 		if (y < 0.0) y += 1.0e7;
-		printf ("X(m)         :  %0.17lg\n"
-		        "Y(m)         :  %0.17lg\n", x, y);
+		printf ("X(m)         :  "FMT_DIST"\n"
+		        "Y(m)         :  "FMT_DIST"\n", x, y);
 		printf ("MGRS         :  %s%s %05d %05d\n", z, zona(h, x, y),
 			(int)(x) % 100000, (int)(y) % 100000);
 
@@ -282,25 +286,25 @@ int main (int argc, char **argv)
 		l = L = 0.0;
 		sscanf (linea, "%lf%lf", &l, &L);
 	
-		printf ("Lat(h.mmssss):  %0.17lg\n", l);
-		printf ("Lon(h.mmssss):  %0.17lg\n", L);
+		printf ("Lat(h.mmssss):  "FMT_ANGL"\n", l);
+		printf ("Lon(h.mmssss):  "FMT_ANGL"\n", L);
 		l = hms2h(l); L = hms2h(L);
-		printf ("Lat(deg)     :  %0.17lg\n", l);
-		printf ("Lon(deg)     :  %0.17lg\n", L);
+		printf ("Lat(deg)     :  "FMT_ANGL"\n", l);
+		printf ("Lon(deg)     :  "FMT_ANGL"\n", L);
 		l *= M_PI/180.0; L *= M_PI/180.0;
-		printf ("Beta         :  %0.17lg\n", geo_Beta(sg, l));
-		printf ("M            :  %0.17lg\n", geo_M(sg, l));
-		printf ("N            :  %0.17lg\n", geo_N(sg, l));
+		printf ("Beta         :  "FMT_DIST"\n", geo_Beta(sg, l));
+		printf ("M            :  "FMT_DIST"\n", geo_M(sg, l));
+		printf ("N            :  "FMT_DIST"\n", geo_N(sg, l));
 
 		geo_K_conv(sg, l, L, &k, &d);
-		printf ("K            :  %0.17lg\n", k);
-		printf ("Converg.     :  %0.17lg\n", 180.0/M_PI*d);
-		printf ("Conv(R.)     :  %0.17lg\n", geo_N(sg, l)/tan(l));
+		printf ("K            :  "FMT_NUMB"\n", k);
+		printf ("Converg.     :  "FMT_ANGL"\n", 180.0/M_PI*d);
+		printf ("Conv(R.)     :  "FMT_DIST"\n", geo_N(sg, l)/tan(l));
 
 		geo_geod2utm(sg, l, L, &x, &y);
 		if (y < 0.0) y += 1.0e7;
-		printf ("X(m)         :  %0.17lg\n"
-		        "Y(m)         :  %0.17lg\n", x, y);
+		printf ("X(m)         :  "FMT_DIST"\n"
+		        "Y(m)         :  "FMT_DIST"\n", x, y);
 		break;
 	}
 	case 4: { /* utm->geodesicas (dentro del huso) */
@@ -316,24 +320,24 @@ int main (int argc, char **argv)
 
 		geo_utm2geod(sg, x, y, &l, &L);
 	
-		printf ("Lat(h.mmssss):  %0.17lg\n", h2hms(l * 180.0/M_PI));
-		printf ("Lon(h.mmssss):  %0.17lg\n", h2hms(L * 180.0/M_PI));
-		printf ("Lat(deg)     :  %0.17lg\n", l * 180.0/M_PI);
-		printf ("Lon(deg)     :  %0.17lg\n", L * 180.0/M_PI);
+		printf ("Lat(h.mmssss):  "FMT_ANGL"\n", h2hms(l * 180.0/M_PI));
+		printf ("Lon(h.mmssss):  "FMT_ANGL"\n", h2hms(L * 180.0/M_PI));
+		printf ("Lat(deg)     :  "FMT_ANGL"\n", l * 180.0/M_PI);
+		printf ("Lon(deg)     :  "FMT_ANGL"\n", L * 180.0/M_PI);
 
-		printf ("Beta         :  %0.17lg\n", geo_Beta(sg, l));
-		printf ("M            :  %0.17lg\n", geo_M(sg, l));
-		printf ("N            :  %0.17lg\n", geo_N(sg, l));
+		printf ("Beta         :  "FMT_DIST"\n", geo_Beta(sg, l));
+		printf ("M            :  "FMT_DIST"\n", geo_M(sg, l));
+		printf ("N            :  "FMT_DIST"\n", geo_N(sg, l));
 
 		geo_K_conv(sg, l, L, &k, &d);
-		printf ("K            :  %0.17lg\n", k);
-		printf ("Converg.     :  %0.17lg\n", 180.0/M_PI*d);
-		printf ("Conv(R.)     :  %0.17lg\n", geo_N(sg, l)/tan(l));
+		printf ("K            :  "FMT_NUMB"\n", k);
+		printf ("Converg.     :  "FMT_ANGL"\n", 180.0/M_PI*d);
+		printf ("Conv(R.)     :  "FMT_DIST"\n", geo_N(sg, l)/tan(l));
 
 		geo_geod2utm(sg, l, L, &x, &y);
 		if (y < 0.0) y += 1.0e7;
-		printf ("X(m)         :  %0.17lg\n"
-		        "Y(m)         :  %0.17lg\n", x, y);
+		printf ("X(m)         :  "FMT_DIST"\n"
+		        "Y(m)         :  "FMT_DIST"\n", x, y);
 		break;
 	}
 	} /* switch */
@@ -341,4 +345,4 @@ int main (int argc, char **argv)
 
 } /* main */
 
-/* $Id: main.c,v 1.8 2007/07/02 21:23:45 luis Exp $ */
+/* $Id: main.c,v 1.9 2007/07/13 19:57:54 luis Exp $ */

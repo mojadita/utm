@@ -1,7 +1,11 @@
-/* $Id: genutm.c,v 2.11 2005/10/17 19:39:47 luis Exp $
+/* $Id: genutm.c,v 2.12 2007/07/13 19:57:54 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Sun May 10 15:25:27 MET DST 1998
  * $Log: genutm.c,v $
+ * Revision 2.12  2007/07/13 19:57:54  luis
+ * * Incluidas las funciones para el cálculo de la FTT del módulo fft.
+ *   Aún no están integradas.
+ *
  * Revision 2.11  2005/10/17 19:39:47  luis
  * Recuperado genutm.c
  *
@@ -479,4 +483,4 @@ int main(int argc, char **argv)
   exit(0);
 } /* main */
 
-/* $Id: genutm.c,v 2.11 2005/10/17 19:39:47 luis Exp $ */
+/* $Id: genutm.c,v 2.12 2007/07/13 19:57:54 luis Exp $ */
