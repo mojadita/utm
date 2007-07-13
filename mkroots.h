@@ -1,4 +1,4 @@
-/* $Id: mkroots.h,v 2.1 2007/07/13 19:57:54 luis Exp $
+/* $Id: mkroots.h,v 2.2 2007/07/13 21:55:12 luis Exp $
  * Author: Luis.Colorado@HispaLinux.ES
  */
 
@@ -443,4 +443,4 @@ complex_t **FFT_W [32] = {
 }; /* complex_t **FFT_ROOTS [32] */
 
 
-/* $Id: mkroots.h,v 2.1 2007/07/13 19:57:54 luis Exp $ */
+/* $Id: mkroots.h,v 2.2 2007/07/13 21:55:12 luis Exp $ */

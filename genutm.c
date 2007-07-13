@@ -1,8 +1,12 @@
-/* $Id: genutm.c,v 2.13 2007/07/13 20:58:28 luis Exp $
+/* $Id: genutm.c,v 2.14 2007/07/13 21:55:12 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Sun May 10 15:25:27 MET DST 1998
  * $Log: genutm.c,v $
- * Revision 2.13  2007/07/13 20:58:28  luis
+ * Revision 2.14  2007/07/13 21:55:12  luis
+ * * Introduciendo la sustitución del cálculo de las series de Fourier por
+ *   el cálculo de los coeficientes a partir de la FFT.
+ *
+ * Revision 2.13  2007-07-13 20:58:28  luis
  * * Estamos incluyendo soporte para calcular los datos por fft en lugar de
  *   integrar numericamente por simpson.
  *
@@ -345,7 +349,7 @@ int main(int argc, char **argv)
 	int i, opt, ord;
 	extern char *optarg;
 	fft_t FFT;
-	fft_init (&FFT, GEO_NTERM);
+	fft_init (&FFT, 2*GEO_NTERM);
 
   while((opt = getopt(argc, argv, "g:")) != EOF) {
     switch(opt){
@@ -372,22 +376,32 @@ int main(int argc, char **argv)
   printf("define(GEO_NTERM,%d)\n", GEO_NTERM);
   printf("define(GEO_NPOT,%d)\n", GEO_NPOT);
 
+  { /* M (FFT) */
+  	complex_t M[2*GEO_NTERM];
+	for (i = 0; i < 2*GEO_NTERM; i++) {
+		M[i].x = m(0,M_PI*i/GEO_NTERM); M[i].y = 0.0;
+	} /* for */
+	fft_direct(&FFT, M);
+	for (i = 0; i < GEO_NTERM; i++) {
+		printf("define(M_%d_FFT,%0.17lG)\n", i, (i == 0) ? M[i].x : 2.0*M[i].x);
+	} /* for */
+  } /* bloque */
   /* M */
   for (i = 0; i < GEO_NTERM; i++) {
     sg->M[i] = (i & 1) ? 0.0 : C_Fourier_cos(m, 0, i, Niter)/M_PI;
     printf("define(M_%d,%0.17lG)\n", i, sg->M[i]);
   }
-  { /* M (FFT) */
-  	complex_t M[GEO_NTERM];
-	for (i = 0; i < GEO_NTERM; i++) {
-		M[i].x = m(0,2.0*M_PI*i/GEO_NTERM); M[i].y = 0.0;
+
+  { /* N (FFT) */
+  	complex_t M[2*GEO_NTERM];
+	for (i = 0; i < 2*GEO_NTERM; i++) {
+		M[i].x = n(0,M_PI*i/GEO_NTERM); M[i].y = 0.0;
 	} /* for */
 	fft_direct(&FFT, M);
 	for (i = 0; i < GEO_NTERM; i++) {
-		printf("define(FFT_M_%d,%0.17lG)\n", i, M[i].x);
+		printf("define(N_%d_FFT,%0.17lG)\n", i, (i == 0) ? M[i].x : 2.0*M[i].x);
 	} /* for */
   } /* bloque */
-
   /* N */
   for (i = 0; i < GEO_NTERM; i++) {
     sg->N[i] = (i & 1) ? 0.0 : C_Fourier_cos(n, 0, i, Niter)/M_PI;
@@ -501,4 +515,4 @@ int main(int argc, char **argv)
   exit(0);
 } /* main */
 
-/* $Id: genutm.c,v 2.13 2007/07/13 20:58:28 luis Exp $ */
+/* $Id: genutm.c,v 2.14 2007/07/13 21:55:12 luis Exp $ */

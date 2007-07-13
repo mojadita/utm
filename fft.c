@@ -1,4 +1,4 @@
-/* $Id: fft.c,v 2.1 2007/07/13 19:57:54 luis Exp $
+/* $Id: fft.c,v 2.2 2007/07/13 21:55:12 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@HispaLinux.ES>
  * Date: Tue Jun  8 20:35:34 MEST 2004
  *
@@ -26,6 +26,7 @@
 #include <sys/socket.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <time.h>
@@ -38,7 +39,7 @@
 /* types */
 
 /* variables */
-static char FFT_C_RCSId[]="\n$Id: fft.c,v 2.1 2007/07/13 19:57:54 luis Exp $\n";
+static char FFT_C_RCSId[]="\n$Id: fft.c,v 2.2 2007/07/13 21:55:12 luis Exp $\n";
 
 /* functions */
 
@@ -168,22 +169,12 @@ void fft_init(fft_t *fft, int N)
 
 void fft_direct(fft_t *fft, complex_t *a)
 {
-	/* permutamos los datos de entrada */
-	fft_permute(fft, a);
-
-	/* vamos con la fft. */
-	fft_rec(fft, fft->n, fft->N, a, 1, fft->w);
-
-} /* fft_direct */
-
-void fft_reverse(fft_t *fft, complex_t *a)
-{
 	int i;
 
 	/* permutamos los datos de entrada */
 	fft_permute(fft, a);
 
-	/* vamos con la fft */
+	/* vamos con la fft. */
 	fft_rec(fft, fft->n, fft->N, a, 1, fft->W);
 
 	/* dividimos a por N */
@@ -192,6 +183,16 @@ void fft_reverse(fft_t *fft, complex_t *a)
 		a[i].y /= (double) fft->N;
 	} /* for */
 
+} /* fft_direct */
+
+void fft_reverse(fft_t *fft, complex_t *a)
+{
+	/* permutamos los datos de entrada */
+	fft_permute(fft, a);
+
+	/* vamos con la fft */
+	fft_rec(fft, fft->n, fft->N, a, 1, fft->w);
+
 } /* fft_reverse */
 
-/* $Id: fft.c,v 2.1 2007/07/13 19:57:54 luis Exp $ */
+/* $Id: fft.c,v 2.2 2007/07/13 21:55:12 luis Exp $ */
