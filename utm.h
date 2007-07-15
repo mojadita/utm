@@ -1,8 +1,13 @@
-/* $Id: utm.h,v 2.5 2002/10/17 09:32:59 luis Exp $
+/* $Id: utm.h,v 2.6 2007/07/15 23:11:27 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Thu Aug 29 21:21:22 MEST 2002
  * $Log: utm.h,v $
- * Revision 2.5  2002/10/17 09:32:59  luis
+ * Revision 2.6  2007/07/15 23:11:27  luis
+ * * Corregida errata en el cálculo de N por FFT.
+ * * Corregido pru.c para que muestre el tamaño de la estructura struct
+ *   utmparam.
+ *
+ * Revision 2.5  2002-10-17 09:32:59  luis
  * Borrado por error genutm.c
  *
  * Revision 2.4  2002/09/23 06:14:17  luis
@@ -30,7 +35,7 @@
 
 /* Number of terms used in fourier series */
 #ifndef GEO_NTERM
-#define GEO_NTERM 9
+#define GEO_NTERM 8
 #endif
 
 #ifndef GEO_NPOT
@@ -86,4 +91,4 @@ void geo_utm2geod (struct utmparam *gs, double x, double y,
 	double *lat, double *lon);
 
 #endif /* _UTM_H */
-/* $Id: utm.h,v 2.5 2002/10/17 09:32:59 luis Exp $ */
+/* $Id: utm.h,v 2.6 2007/07/15 23:11:27 luis Exp $ */

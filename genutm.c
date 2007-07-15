@@ -1,8 +1,13 @@
-/* $Id: genutm.c,v 2.16 2007/07/15 22:55:41 luis Exp $
+/* $Id: genutm.c,v 2.17 2007/07/15 23:11:27 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Sun May 10 15:25:27 MET DST 1998
  * $Log: genutm.c,v $
- * Revision 2.16  2007/07/15 22:55:41  luis
+ * Revision 2.17  2007/07/15 23:11:27  luis
+ * * Corregida errata en el cálculo de N por FFT.
+ * * Corregido pru.c para que muestre el tamaño de la estructura struct
+ *   utmparam.
+ *
+ * Revision 2.16  2007-07-15 22:55:41  luis
  * * Integrado el cálculo de los parámetros a partir de la transformada
  *   rápida de Fourier, en lugar de integrar numéricamente el producto
  *   escalar de los vectores de la base con las funciones.
@@ -449,10 +454,10 @@ int main(int argc, char **argv)
     printf("define(N_%d,%0.17lG)\n", i, sg->N[i]);
   } /* for */
 #else
-  f2coef(n, 0, M, COS);
+  f2coef(n, 0, sg->N, COS);
   for (i = 0; i < GEO_NTERM; i++) {
 	if (i & 1) sg->N[i] = 0.0;
-	printf("define(N_%d,%0.17lG)dnl FFT\n", i, M[i]);
+	printf("define(N_%d,%0.17lG)dnl FFT\n", i, sg->N[i]);
   } /* for */
 #endif
 
@@ -632,4 +637,4 @@ int main(int argc, char **argv)
   exit(0);
 } /* main */
 
-/* $Id: genutm.c,v 2.16 2007/07/15 22:55:41 luis Exp $ */
+/* $Id: genutm.c,v 2.17 2007/07/15 23:11:27 luis Exp $ */
