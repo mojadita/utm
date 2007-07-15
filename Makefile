@@ -1,8 +1,8 @@
-# $Id: Makefile,v 1.14 2007/07/15 23:11:27 luis Exp $
+# $Id: Makefile,v 1.15 2007/07/15 23:39:05 luis Exp $
 # Author: Luis Colorado <luis.colorado@slug.ctv.es>
 # Date: Mon Aug 24 16:53:10 MET DST 1998
 
-OPTIONS=-DGEO_NTERM=8 -DGEO_NPOT=7 -DUSE_FFT #-DNiter=4096
+OPTIONS=-DGEO_NTERM=16 -DGEO_NPOT=15 -DUSE_FFT #-DNiter=4096
 CFLAGS=-O2 -g
 LIBS=-lm
 M4=m4
