@@ -1,8 +1,11 @@
-/* $Id: genutm.c,v 2.14 2007/07/13 21:55:12 luis Exp $
+/* $Id: genutm.c,v 2.15 2007/07/15 19:42:58 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Sun May 10 15:25:27 MET DST 1998
  * $Log: genutm.c,v $
- * Revision 2.14  2007/07/13 21:55:12  luis
+ * Revision 2.15  2007/07/15 19:42:58  luis
+ * * Modificaciones para integrar FFT en el cálculo de las constantes.
+ *
+ * Revision 2.14  2007-07-13 21:55:12  luis
  * * Introduciendo la sustitución del cálculo de las series de Fourier por
  *   el cálculo de los coeficientes a partir de la FFT.
  *
@@ -156,6 +159,24 @@ double C_Fourier_cos(double(*f)(int, double), int ord, int i, int n)
   return result;
 } /* C_Fourier_cos */
 
+static void myFFT(double (*f)(int n, double x), complex_t *v)
+{
+	static fft_t FFT;
+	static int notused = TRUE;
+	complex_t fft_array[2*GEO_NTERM];
+
+	if (notused) {
+		notused = FALSE;
+		fft_init(&FFT, 2*GEO_NTERM);
+	} /* if */
+
+	for (i = 0; i < 2*GEO_NTERM; i++) {
+		fft_array[i].x = f(0, M_PI*i/GEO_NTERM);
+		fft_array[i].y = 0.0;
+	} /* for */
+
+	fft_forward(&FFT, fft_array);
+} /* myFFT */
 
 /************************************************************************
  ******************* COMIENZO DE LAS FUNCIONES CALCULADAS ***************
@@ -515,4 +536,4 @@ int main(int argc, char **argv)
   exit(0);
 } /* main */
 
-/* $Id: genutm.c,v 2.14 2007/07/13 21:55:12 luis Exp $ */
+/* $Id: genutm.c,v 2.15 2007/07/15 19:42:58 luis Exp $ */
