@@ -1,8 +1,13 @@
-/* $Id: genutm.c,v 2.15 2007/07/15 19:42:58 luis Exp $
+/* $Id: genutm.c,v 2.16 2007/07/15 22:55:41 luis Exp $
  * Author: Luis Colorado <Luis.Colorado@SLUG.CTV.ES>
  * Date: Sun May 10 15:25:27 MET DST 1998
  * $Log: genutm.c,v $
- * Revision 2.15  2007/07/15 19:42:58  luis
+ * Revision 2.16  2007/07/15 22:55:41  luis
+ * * Integrado el c√°lculo de los par√°metros a partir de la transformada
+ *   r√°pida de Fourier, en lugar de integrar num√©ricamente el producto
+ *   escalar de los vectores de la base con las funciones.
+ *
+ * Revision 2.15  2007-07-15 19:42:58  luis
  * * Modificaciones para integrar FFT en el c√°lculo de las constantes.
  *
  * Revision 2.14  2007-07-13 21:55:12  luis
@@ -66,6 +71,10 @@
 
 #define IN_GENUTM_C
 
+#ifndef USE_FFT
+#define USE_FFT 1
+#endif
+
 /* Standard include files */
 #include <sys/types.h>
 #include <stdio.h>
@@ -74,7 +83,14 @@
 #include "utm.h"
 #include "utm_ini.h"
 
+#if USE_FFT
 #include "fft.h"
+#endif
+
+#ifndef FALSE
+#define FALSE 0
+#define TRUE (!FALSE)
+#endif
 
 /* Number of iterations in Simpson's numerical integration */
 #ifndef Niter
@@ -107,6 +123,7 @@ double m(int dumb, double l)
   return(1.0 - sg->e2) * nl*nl*nl;
 } /* m */
 
+#if !USE_FFT
 /* Simpson's integral of function f, between a and b, subdivided in
  * n subintervals */
 double simpson(double(*f)(double),double a, double b, int n)
@@ -159,11 +176,16 @@ double C_Fourier_cos(double(*f)(int, double), int ord, int i, int n)
   return result;
 } /* C_Fourier_cos */
 
-static void myFFT(double (*f)(int n, double x), complex_t *v)
+#else
+
+#define SIN		0
+#define COS		1
+static void f2coef(double (*f)(int n, double x), int ord, double *v, int sc)
 {
 	static fft_t FFT;
 	static int notused = TRUE;
 	complex_t fft_array[2*GEO_NTERM];
+	int i;
 
 	if (notused) {
 		notused = FALSE;
@@ -171,12 +193,22 @@ static void myFFT(double (*f)(int n, double x), complex_t *v)
 	} /* if */
 
 	for (i = 0; i < 2*GEO_NTERM; i++) {
-		fft_array[i].x = f(0, M_PI*i/GEO_NTERM);
+		fft_array[i].x = f(ord, M_PI*i/GEO_NTERM);
 		fft_array[i].y = 0.0;
 	} /* for */
 
-	fft_forward(&FFT, fft_array);
-} /* myFFT */
+	fft_direct(&FFT, fft_array);
+
+	for (i = 0; i < GEO_NTERM; i++) {
+		switch(sc) {
+		case SIN:
+			v[i] = -2.0*fft_array[i].y; break;
+		case COS:
+			v[i] = i ? 2.0*fft_array[i].x : fft_array[i].x; break;
+		} /* switch */
+	} /* for */
+} /* f2coef */
+#endif
 
 /************************************************************************
  ******************* COMIENZO DE LAS FUNCIONES CALCULADAS ***************
@@ -369,8 +401,7 @@ int main(int argc, char **argv)
 	double l, L, err;
 	int i, opt, ord;
 	extern char *optarg;
-	fft_t FFT;
-	fft_init (&FFT, 2*GEO_NTERM);
+	double M[GEO_NTERM];
 
   while((opt = getopt(argc, argv, "g:")) != EOF) {
     switch(opt){
@@ -397,37 +428,33 @@ int main(int argc, char **argv)
   printf("define(GEO_NTERM,%d)\n", GEO_NTERM);
   printf("define(GEO_NPOT,%d)\n", GEO_NPOT);
 
-  { /* M (FFT) */
-  	complex_t M[2*GEO_NTERM];
-	for (i = 0; i < 2*GEO_NTERM; i++) {
-		M[i].x = m(0,M_PI*i/GEO_NTERM); M[i].y = 0.0;
-	} /* for */
-	fft_direct(&FFT, M);
-	for (i = 0; i < GEO_NTERM; i++) {
-		printf("define(M_%d_FFT,%0.17lG)\n", i, (i == 0) ? M[i].x : 2.0*M[i].x);
-	} /* for */
-  } /* bloque */
   /* M */
+#if !USE_FFT
   for (i = 0; i < GEO_NTERM; i++) {
     sg->M[i] = (i & 1) ? 0.0 : C_Fourier_cos(m, 0, i, Niter)/M_PI;
     printf("define(M_%d,%0.17lG)\n", i, sg->M[i]);
-  }
+  } /* for */
+#else
+  f2coef(m, 0, sg->M, COS);
+  for (i = 0; i < GEO_NTERM; i++) {
+  		if (i & 1) sg->M[i] = 0.0;
+  		printf("define(M_%d,%0.17lG)dnl FFT\n", i, sg->M[i]);
+  } /* for */
+#endif
 
-  { /* N (FFT) */
-  	complex_t M[2*GEO_NTERM];
-	for (i = 0; i < 2*GEO_NTERM; i++) {
-		M[i].x = n(0,M_PI*i/GEO_NTERM); M[i].y = 0.0;
-	} /* for */
-	fft_direct(&FFT, M);
-	for (i = 0; i < GEO_NTERM; i++) {
-		printf("define(N_%d_FFT,%0.17lG)\n", i, (i == 0) ? M[i].x : 2.0*M[i].x);
-	} /* for */
-  } /* bloque */
   /* N */
+#if !USE_FFT
   for (i = 0; i < GEO_NTERM; i++) {
     sg->N[i] = (i & 1) ? 0.0 : C_Fourier_cos(n, 0, i, Niter)/M_PI;
     printf("define(N_%d,%0.17lG)\n", i, sg->N[i]);
-  }
+  } /* for */
+#else
+  f2coef(n, 0, M, COS);
+  for (i = 0; i < GEO_NTERM; i++) {
+	if (i & 1) sg->N[i] = 0.0;
+	printf("define(N_%d,%0.17lG)dnl FFT\n", i, M[i]);
+  } /* for */
+#endif
 
   /* BetaPhi */
   sg->BetaPhi = sg->M[0];
@@ -443,6 +470,7 @@ int main(int argc, char **argv)
   } /* for */
 
   /* A */
+#if !USE_FFT
   for (i = 0; i < GEO_NTERM; i++) {
   	printf("define(A_0_%d,%0.17lG)\n", i, 0.0);
   } /* for */
@@ -461,8 +489,25 @@ int main(int argc, char **argv)
 		printf("define(A_%d_%d,%0.17lG)\n", ord, i, sg->A[ord][i]);
 	} /* for */
   } /* for */
+#else
+  for (ord = 0; ord < GEO_NPOT; ord++) {
+  	switch(ord & 1) {
+	case 0: /* tÈrminos en sin */
+		f2coef(preA, ord, sg->A[ord], SIN); break;
+	case 1: /* tÈrminos en cos */
+		f2coef(preA, ord, sg->A[ord], COS); break;
+	} /* switch */
+	for (i = 0; i < GEO_NTERM; i++) {
+		if (!ord) sg->A[ord][i] = 0.0;
+		else if ((i & 1) != (ord & 1))
+			sg->A[ord][i] = 0.0;
+		printf("define(A_%d_%d,%0.17lG)dnl FFT\n", ord, i, sg->A[ord][i]);
+	} /* for */
+  } /* for */
+#endif
 
   /* Ateb */
+#if !USE_FFT
   for (i = 0; i < GEO_NTERM; i++) {
   	printf("define(Ateb_0_%d,%0.17lG)\n", i, 0.0);
   	printf("define(Ateb_deg_0_%d,%0.17lG)\n", i, 0.0);
@@ -483,12 +528,30 @@ int main(int argc, char **argv)
 		printf("define(Ateb_deg_%d_%d,%0.17lG)\n", ord, i, sg->Ateb[ord][i]*180.0/M_PI);
 	} /* for */
   } /* for */
+#else
+  for (ord = 0; ord < GEO_NPOT; ord++) {
+  	switch (ord & 1) {
+	case 0: /* tÈrminos en sin */
+		f2coef(preAteb, ord, sg->Ateb[ord], SIN); break;
+	case 1: /* tÈrminos en cos */
+		f2coef(preAteb, ord, sg->Ateb[ord], COS); break;
+	} /* switch */
+	for (i = 0; i < GEO_NTERM; i++) {
+		if (!ord) sg->Ateb[ord][i] = 0.0;
+		else if (i & 1)
+			sg->Ateb[ord][i] = 0.0;
+		printf("define(Ateb_%d_%d,%0.17lG)dnl FFT\n", ord, i, sg->Ateb[ord][i]);
+		printf("define(Ateb_deg_%d_%d,%0.17lG)dnl FFT\n", ord, i, sg->Ateb[ord][i]*180.0/M_PI);
+	} /* for */
+  } /* for */
+#endif
 
   /* BetaPI */
   sg->BetaPI = geo_Beta(sg, M_PI)/sg->a;
   printf("define(BetaPI,%0.17lG)\n", sg->BetaPI);
 
   /* F */
+#if !USE_FFT
   for (i = 0; i < GEO_NTERM; i++) {
   	printf("define(F_0_%d,%0.17lG)\n", i, 0.0);
   	printf("define(F_deg_0_%d,%0.17lG)\n", i, 0.0);
@@ -509,8 +572,25 @@ int main(int argc, char **argv)
 		printf("define(F_deg_%d_%d,%0.17lG)\n", ord, i, sg->F[ord][i]*180.0/M_PI);
 	} /* for */
   } /* for */
+#else
+  for (ord = 0; ord < GEO_NPOT; ord++) {
+  	switch (ord & 1) {
+	case 0: /* tÈrminos en sin */
+		f2coef(preF, ord, sg->F[ord], SIN); break;
+	case 1: /* tÈrminos en cos */
+		f2coef(preF, ord, sg->F[ord], COS); break;
+	} /* switch */
+	for (i = 0; i < GEO_NTERM; i++) {
+		if (!ord) sg->F[ord][i] = 0.0;
+		else if ((ord &1) == (i & 1))  sg->F[ord][i] = 0.0;
+		printf("define(F_%d_%d,%0.17lG)dnl FFT\n", ord, i, sg->F[ord][i]);
+		printf("define(F_deg_%d_%d,%0.17lG)dnl FFT\n", ord, i, sg->F[ord][i]*180.0/M_PI);
+	} /* for */
+  } /* for */
+#endif
 
   /* dQ2Lat */
+#if !USE_FFT
   for (i = 0; i < GEO_NTERM; i++) {
   	printf("define(dQ2Lat_0_%d,%0.17lG)\n", i, 0.0);
   	printf("define(dQ2Lat_deg_0_%d,%0.17lG)\n", i, 0.0);
@@ -531,9 +611,25 @@ int main(int argc, char **argv)
 		printf("define(dQ2Lat_deg_%d_%d,%0.17lG)\n", ord, i, sg->dQ2Lat[ord][i]*180.0/M_PI);
 	} /* for */
   } /* for */
+#else
+  for (ord = 0; ord < GEO_NPOT; ord++) {
+  	switch (ord & 1) {
+	case 0: /* TÈrminos en sin */
+		f2coef(predQ2Lat, ord, sg->dQ2Lat[ord], SIN); break;
+	case 1: /* TÈrminos en cos */
+		f2coef(predQ2Lat, ord, sg->dQ2Lat[ord], COS); break;
+	} /* switch */
+	for (i = 0; i < GEO_NTERM; i++) {
+		if (!ord) sg->dQ2Lat[ord][i] = 0.0;
+		else if ((ord & 1) != (i & 1)) sg->dQ2Lat[ord][i] = 0.0;
+		printf("define(dQ2Lat_%d_%d,%0.17lG)dnl FFT\n", ord, i, sg->dQ2Lat[ord][i]);
+		printf("define(dQ2Lat_deg_%d_%d,%0.17lG)dnl FFT\n", ord, i, sg->dQ2Lat[ord][i]*180.0/M_PI);
+	} /* for */
+  } /* for */
+#endif
 
   printf("divert(0)dnl\n");
   exit(0);
 } /* main */
 
-/* $Id: genutm.c,v 2.15 2007/07/15 19:42:58 luis Exp $ */
+/* $Id: genutm.c,v 2.16 2007/07/15 22:55:41 luis Exp $ */
