@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.15 2007/07/15 23:39:05 luis Exp $
+# $Id: Makefile,v 1.16 2009/10/16 00:18:37 luis Exp $
 # Author: Luis Colorado <luis.colorado@slug.ctv.es>
 # Date: Mon Aug 24 16:53:10 MET DST 1998
 
@@ -10,7 +10,7 @@ CC=gcc
 
 .SUFFIXES: .m4 .c .o .hp48
 
-progs = genutm utm pru #media
+progs = genutm utm pru utm.hp48 #media
 
 modulos = AA AM AN BN BR CC CD EA EB EC ED EE EF FA HE HO ID IN KA RF SA ST WD WE
 
@@ -33,6 +33,9 @@ modulos_hp48: $(modulos_hp48) Makefile
 
 .c.o:
 	$(CC) $(CFLAGS) $(OPTIONS) -c $<
+
+utm.hp48: utm.hp48.m4 $(modulos_hp48)
+	$(M4) $(M4FLAGS) $(OPTIONS) utm.hp48.m4 > utm.hp48
 
 utm_objs = $(modulos_o) utmcalc.o main.o
 utm: $(utm_objs) Makefile
