@@ -1,0 +1,8 @@
+*.o
+*.hp48
+[A-Z][A-Z].c
+[A-Z][A-Z].m4
+genutm
+utm
+pru
+CVS/

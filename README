@@ -1,0 +1,11 @@
+Universal Transverse Mercator routines.  These routines
+use FFT to model the functions and allow to calculate
+efficiently with precalculated coefficients for a
+determinate ellipsoid.  Direct and inverse functions
+are in the library.  Several groups of coefficients are
+determined for several ellipsoids.
+
+(C) 1998-2014 Luis Colorado <lc@luiscoloradosistemas.com>
+These functions are Open Source, distribution is granted
+on a LGPL license.  LGPL document can be downloaded from
+www.gnu.org.

@@ -19,19 +19,20 @@ divert(0)dnl
 @ $Id: utmtables_hp48.m4,v 1.3 2002/09/23 06:14:17 luis Exp $
 @ Autor: Luis Colorado <luis.colorado@@slug.ctv.es>
 @ Date: Mon Aug 24 16:29:12 MET DST 1998
-  DIR
-    `A'            Aaxis
-    `K0'           K0
-    `E2'           E2
-    `BetaPI'       BetaPI
-    `BetaPhi'      BetaPhi_deg
-    `Nv'           defineTable(`N')
-    `Mv'           defineTable(`M')
-    `Betav'        defineTable(`Beta')
-    `Av'           defineTable2(`A')
-    `Atebv'        defineTable2(`Ateb_deg')
-    `Fv'           defineTable2(`F')
-    `dQ2Latv'      defineTable2(`dQ2Lat_deg')
-  END
+  {
+    `@NAME@'         "NAME"
+    `@ELLIPSOID@'    "ELLIPSOID"
+    `@A@'            Aaxis
+    `@K0@'           0.9996
+    `@E2@'           E2
+    `@BetaPI@'       BetaPI
+    `@BetaPhi@'      BetaPhi_deg
+    `@Nv@'           defineTable(`N')
+    `@Mv@'           defineTable(`M')
+    `@Betav@'        defineTable(`Beta')
+    `@Av@'           defineTable2(`A')
+    `@Atebv@'        defineTable2(`Ateb_deg')
+    `@Fv@'           defineTable2(`F')
+    `@dQ2Latv@'      defineTable2(`dQ2Lat_deg')
+  }
 @ $Id: utmtables_hp48.m4,v 1.3 2002/09/23 06:14:17 luis Exp $
-rq
