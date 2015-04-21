@@ -10,7 +10,12 @@ CC=gcc
 
 .SUFFIXES: .m4 .c .o .hp48
 
-progs = genutm utm pru utm.hp48 #media
+all: $(modulos) UTM
+clean:
+	rm -f $(modulos) UTM $(modulos_o) $(utm_objs) $(genutm_objs) $(media_objs) $(pru_objs) $(modulos_c) $(modulos_m4) $(modulos_hp48) $(progs)
+	rm -f genutm utm.hp48
+
+progs = genutm utm pru UTM.hp48 #media
 
 modulos = AA AM AN BN BR CC CD EA EB EC ED EE EF FA HE HO ID IN KA RF SA ST WD WE
 
@@ -19,47 +24,46 @@ modulos_o = $(modulos:=.o)
 modulos_m4 = $(modulos:=.m4)
 modulos_hp48 = $(modulos:=.hp48)
 
-all: $(progs) Makefile $(modulos_hp48)
+all: $(progs) Makefile $(modulos)
 modulos_c: $(modulos_c) Makefile
 modulos_m4: $(modulos_m4) Makefile
 modulos_o: $(modulos_o) Makefile
 modulos_hp48: $(modulos_hp48) Makefile
 
-.m4.c:
-	$(M4) $(M4FLAGS) $(OPTIONS) $< utm.c.m4 >$*.c
+%: %.hp48
+	hp50conv < $< >$@
 
-.m4.hp48:
-	$(M4) $(M4FLAGS) $(OPTIONS) $< utmtables_hp48.m4 >$*.hp48
+%.c: %.m4
+	$(M4) $(M4FLAGS) $(OPTIONS) $< utm.c.m4 >$@
 
-.c.o:
-	$(CC) $(CFLAGS) $(OPTIONS) -c $<
+%.hp48: %.m4
+	$(M4) $(M4FLAGS) $(OPTIONS) $< utmtables_hp48.m4 >$@
 
-utm.hp48: utm.hp48.m4 $(modulos_hp48)
-	$(M4) $(M4FLAGS) $(OPTIONS) utm.hp48.m4 > utm.hp48
+%.o: %.c
+	$(CC) $(CFLAGS) $(OPTIONS) -c $< -o $@
+
+UTM.hp48: UTM.hp48.m4 $(modulos_hp48)
+	$(M4) $(M4FLAGS) $(OPTIONS) $< | sed 1d > $@
 
 utm_objs = $(modulos_o) utmcalc.o main.o
 utm: $(utm_objs) Makefile
-	$(CC) $(CFLAGS) $(LDFLAGS) $(utm_objs) $(LIBS) -o utm
+	$(CC) $(CFLAGS) $(LDFLAGS) $(utm_objs) $(LIBS) -o $@
 $(utm_objs): utm.h Makefile
 
 media_objs = $(modulos_o) media.o utmcalc.o
 media: $(media_objs) Makefile
-	$(CC) $(CFLAGS) $(LDFLAGS) $(media_objs) $(LIBS) -o media
+	$(CC) $(CFLAGS) $(LDFLAGS) $(media_objs) $(LIBS) -o $@
 
 genutm_objs = genutm.o utmcalc.o fft.o
 genutm: $(genutm_objs) Makefile
-	$(CC) $(LDFLAGS) $(genutm_objs) $(LIBS) -o genutm
+	$(CC) $(LDFLAGS) $(genutm_objs) $(LIBS) -o $@
 genutm.o: utm.h utm_ini.h
 fft.o: fft.h mkroots.h
 
 pru_objs = pru.o
 pru: $(pru_objs) Makefile
-	$(CC) $(LDFLAGS) $(pru_objs) -o pru
+	$(CC) $(LDFLAGS) $(pru_objs) -o $@
 pru.o: utm.h Makefile
-
-clean:
-	rm -f $(modulos_o) $(modulos_c) $(modulos_m4) $(modulos_hp48) $(progs)
-	rm -f *.o genutm utm.hp48
 
 $(modulos_m4): genutm  Makefile
 	genutm -g $* >$*.m4
